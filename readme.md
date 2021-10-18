@@ -1,12 +1,11 @@
 # pomysly na projekt
 
-## db schema
-- Fit Apka do liczenia kalorii
+### Fit Apka do liczenia kalorii
 1. User
-    - Username
-    - Password
+   - Username
+   - Password
 2. Set
-    - SetName
+   - SetName
 3. Product
     - ProductName
     - Fats
@@ -16,6 +15,7 @@
     - AllergyName
     - Description
 5. Allergen
+    - AllergenName
 6. SetCategory
     - CategoryName
 7. Substitue
@@ -24,8 +24,24 @@
 8. Comment
     - Content
     - Rate
-9. IngredientCategory
+9.  IngredientCategory
     - CategoryName
 10. Post
     - Title
     - Content
+
+## TODO
+Main:
+- [ ] Make latex docs.
+- [ ] Make ERD diagram.
+- [ ] Configure docker for postgres and Python/Flask.
+- [ ] Create db in Postgres.
+- [ ] Create simple backend in Flask.
+- [ ] Create queries.
+- [ ] Pin queries to Flask.
+- [ ] Create UI in Vue.js.
+
+Optional:
+- [ ] Make REST API.
+- [ ] Sign In/Up with Oauth.
+- [ ] JWT Authentication.
