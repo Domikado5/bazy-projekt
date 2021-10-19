@@ -28,6 +28,8 @@
     - Title
     - Content
 
+![alt text](fitapka_erd.png "ERD Diagram")
+
 ## TODO
 Main:
 - [ ] Make latex docs.
