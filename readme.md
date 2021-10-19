@@ -18,13 +18,11 @@
     - AllergenName
 6. SetCategory
     - CategoryName
-7. Substitue
-    - Ingredient
-    - Substitute
+7. Rate
+    - Rate
 8. Comment
     - Content
-    - Rate
-9.  IngredientCategory
+9.  ProductCategory
     - CategoryName
 10. Post
     - Title
