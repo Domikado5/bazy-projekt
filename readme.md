@@ -31,7 +31,7 @@
 ## TODO
 Main:
 - [ ] Make latex docs.
-- [ ] Make ERD diagram.
+- [x] Make ERD diagram.
 - [ ] Configure docker for postgres and Python/Flask.
 - [ ] Create db in Postgres.
 - [ ] Create simple backend in Flask.
