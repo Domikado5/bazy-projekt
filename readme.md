@@ -1,38 +1,13 @@
-# pomysly na projekt
+## Fit Apka do liczenia kalorii
 
-### Fit Apka do liczenia kalorii
-1. User
-   - Username
-   - Password
-2. Set
-   - SetName
-3. Product
-    - ProductName
-    - Fats
-    - Proteins
-    - Calories
-4. Allergy
-    - AllergyName
-    - Description
-5. Allergen
-    - AllergenName
-6. SetCategory
-    - CategoryName
-7. Rate
-    - Rate
-8. Comment
-    - Content
-9.  ProductCategory
-    - CategoryName
-10. Post
-    - Title
-    - Content
+Documentation (In Polish):
+https://www.overleaf.com/read/pwfzsskkhvht
 
 ![alt text](fitapka_erd.png "ERD Diagram")
 
 ## TODO
 Main:
-- [ ] Make latex docs.
+- [x] Make latex docs.
 - [x] Make ERD diagram.
 - [ ] Configure docker for postgres and Python/Flask.
 - [ ] Create db in Postgres.
