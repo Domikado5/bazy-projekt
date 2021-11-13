@@ -9,7 +9,7 @@ https://www.overleaf.com/read/pwfzsskkhvht
 Main:
 - [x] Make latex docs.
 - [x] Make ERD diagram.
-- [ ] Configure docker for postgres and Python/Flask.
+- [x] Configure docker for postgres and Python/Flask.
 - [ ] Create db in Postgres.
 - [ ] Create simple backend in Flask.
 - [ ] Create queries.
@@ -20,3 +20,7 @@ Optional:
 - [ ] Make REST API.
 - [ ] Sign In/Up with Oauth.
 - [ ] JWT Authentication.
+
+---
+# To run the app
+    docker-compose up -d --build
