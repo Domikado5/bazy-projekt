@@ -62,7 +62,7 @@ CREATE TABLE Units(
 -- products
 DROP TYPE IF EXISTS product_verified;
 
-CREATE TYPE product_verified AS ENUM('veirfied', 'not verified');
+CREATE TYPE product_verified AS ENUM('verified', 'not verified');
 
 DROP SEQUENCE IF EXISTS products_id_seq;
 
