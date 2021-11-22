@@ -23,4 +23,6 @@ Optional:
 
 ---
 # To run the app
+    docker-compose build --no-cache
     docker-compose up -d --build
+    docker-compose exec db psql --username=fitapka --dbname=fitapka
