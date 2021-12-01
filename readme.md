@@ -12,10 +12,17 @@ Main:
 - [x] Configure docker for postgres and Python/FastAPI.
 - [x] Create db in Postgres.
 - [ ] Make CRUD in FastAPI
-    - [ ] Create for all models
-    - [ ] Read for all models
-    - [ ] Update for all models
-    - [ ] Delete for all models
+    - [x] CRUD for User model
+    - [x] CRUD for Post model
+    - [ ] CRUD for Comment model
+    - [ ] CRUD for Unit model
+    - [ ] CRUD for Allergen model
+    - [ ] CRUD for Product model
+    - [ ] CRUD for ProductCategory model
+    - [ ] CRUD for Entry model
+    - [ ] CRUD for Diary model
+    - [ ] CRUD for SetCategory model
+    - [ ] CRUD for Set model
 - [ ] Create queries.
 - [ ] Pin queries to backend.
 - [ ] Pin SQL procedures and functions to backend
