@@ -4,8 +4,8 @@ from datetime import datetime
 from os import stat
 from asyncpg.connection import connect
 from fastapi import FastAPI, HTTPException, Depends
-
-from app.db import CommentUpdate, database, AuthCredentials, User, UserUpdate, Post, PostUpdate, Comment, Unit, Allergen, ProductCategory, Product, Entry, Diary, SetCategory, Set
+from app.db import database, AuthCredentials, User, UserUpdate, Post, PostUpdate, Comment, CommentUpdate, Unit, UnitUpdate,\
+     Allergen, ProductCategory, Product, Entry, Diary, SetCategory, Set
 
 from app.auth import AuthHandler
 import asyncpg
@@ -240,8 +240,59 @@ async def delete_comment(comment_id: int, user=Depends(auth_handler.auth_wrapper
 
 # Create Unit
 @app.post("/create_unit", response_model=Unit)
-async def create_unit(unit: Unit):
+async def create_unit(unit: Unit, user=Depends(auth_handler.auth_wrapper)):
+    if await Unit.objects.get_or_none(unitname=unit.unitname) is not None:
+        raise HTTPException(status_code=400, detail='This unit already exist')
+    if len(unit.unitname) == 0:
+        raise HTTPException(status_code=400, detail="Unit need at least one character!")
     return await unit.save()
+
+
+# Read Unit
+@app.get("/read_unit/{unit_id}")
+async def read_unit(unit_id: int):
+    if (unit := await Unit.objects.get_or_none(id=unit_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Unit of given ID: {unit_id} not found")
+    return unit
+
+
+# Read Units - All
+@app.get("/read_units")
+async def read_units():    
+    return await Unit.objects.all()
+
+
+# Read Units - Pagination
+@app.get("/read_units/{page_number}")
+async def read_units(page_number: int):    
+    if not (units := await Unit.objects.paginate(page_number).all()):
+        raise HTTPException(status_code=404, detail=f'Page {page_number} not found')
+    return units
+
+
+# Update Unit
+@app.put("/update_unit/{unit_id}")
+async def update_unit(unit_id: int, data: UnitUpdate, user=Depends(auth_handler.auth_wrapper)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if (unit := await Unit.objects.get_or_none(id=unit_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Unit of given ID: {unit_id} not found")
+    if len(data.unitname) == 0:
+        raise HTTPException(status_code=400, detail="Unit need at least one character!")
+    if await Unit.objects.get_or_none(unitname=data.unitname) is not None:
+        raise HTTPException(status_code=400, detail="This unit already exist")
+
+    return await unit.update(unitname=data.unitname)
+
+# Delete Unit
+@app.delete("/delete_unit/{unit_id}", status_code=204)
+async def delete_unit(unit_id: int, user=Depends(auth_handler.auth_wrapper)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if (unit := await Unit.objects.get_or_none(id=unit_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Unit of given ID: {unit_id} not found")
+    
+    await unit.delete()
 
 
 @app.post("/create_allergen", response_model=Allergen)

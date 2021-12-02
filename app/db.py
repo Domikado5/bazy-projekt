@@ -90,6 +90,10 @@ class Unit(ormar.Model):
     unitname: str = ormar.String(max_length=32, nullable=False, unique=True)
 
 
+class UnitUpdate(BaseModel):
+    unitname: Optional[str] = None
+
+
 class Allergen(ormar.Model):
     class Meta(BaseMeta):
         tablename = "allergens"
