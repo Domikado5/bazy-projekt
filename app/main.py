@@ -30,9 +30,9 @@ async def fill_db():
     return {"success": True}
 
 
-@app.get("/")
-async def read_root():
-    return await User.objects.all()
+# @app.get("/")
+# async def read_root():
+#     return await User.objects.all()
 
 # authorization / retrieving Token
 @app.post("/login")
