@@ -76,6 +76,11 @@ class Comment(ormar.Model):
     )
     root_post: Post = ormar.ForeignKey(Post)
 
+class CommentUpdate(BaseModel):
+    username: Optional[str] = None
+    content: Optional[str] = None
+    date: Optional[datetime.datetime] = None
+
 
 class Unit(ormar.Model):
     class Meta(BaseMeta):

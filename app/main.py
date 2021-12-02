@@ -5,7 +5,7 @@ from os import stat
 from asyncpg.connection import connect
 from fastapi import FastAPI, HTTPException, Depends
 
-from app.db import database, AuthCredentials, User, UserUpdate, Post, PostUpdate, Comment, Unit, Allergen, ProductCategory, Product, Entry, Diary, SetCategory, Set
+from app.db import CommentUpdate, database, AuthCredentials, User, UserUpdate, Post, PostUpdate, Comment, Unit, Allergen, ProductCategory, Product, Entry, Diary, SetCategory, Set
 
 from app.auth import AuthHandler
 import asyncpg
@@ -84,14 +84,25 @@ async def read_users(page_number: int, user=Depends(auth_handler.auth_wrapper)):
 @app.put("/update_user/{user_id}")
 async def update_user(user_id: int, update_data: UserUpdate, user=Depends(auth_handler.auth_wrapper)):
     if (user_data := await User.objects.get_or_none(id=user_id)) is None:
-        raise HTTPException(status_code=404, detail=f"Post of given ID: {user_id} not found")
+        raise HTTPException(status_code=404, detail=f"User of given ID: {user_id} not found")
     if user_data.id != user['id'] and user['role'] != 'admin':
         raise HTTPException(status_code=403, detail="Unauthorized")
     if update_data.username is not None:
+        if await User.objects.get_or_none(username=update_data.username):
+            raise HTTPException(status_code=400, detail='Username is taken')
+        if Comment.objects.get_or_none(username=user_data.username) is not None:
+            await Comment.objects.filter(username=user_data.username).update(each=True, username=update_data.username)
         await user_data.update(username=update_data.username)
     if update_data.password is not None:
+        if len(update_data.password) < 8 or\
+            not any(char.isdigit() for char in update_data.password) or\
+            not any(char.isupper() for char in update_data.password) or\
+            not any(char.islower() for char in update_data.password):
+            raise HTTPException(status_code=400, detail='Your password must be at least 8 characters long, contain at least one number and have a mixture of uppercase and lowercase letters.')
         await user_data.update(password=update_data.password)
     if update_data.email is not None:
+        if await User.objects.get_or_none(email=update_data.email):
+            raise HTTPException(status_code=400, detail=f'User with email:{update_data.email} already exist')
         await user_data.update(email=update_data.email)
     if update_data.role is not None and user['role'] == 'admin':
         if update_data.role in ['user', 'writer', 'admin']:
@@ -164,10 +175,58 @@ async def delete_post(post_id: int, user=Depends(auth_handler.auth_wrapper)):
     
     await post.delete()
 
-
+# Create Comments
 @app.post("/create_comment", response_model=Comment)
-async def create_comment(comment: Comment):
+async def create_comment(comment: Comment, user=Depends(auth_handler.auth_wrapper)):
+    if await Post.objects.get_or_none(id=comment.root_post) is None:
+        raise HTTPException(status_code=404, detail=f"Root Post of given ID: {comment.root_post} not found")
+    comment.username = user['username']
+    
     return await comment.save()
+
+
+# Read Comment
+@app.get("/read_comment/{comment_id}")
+async def read_comment(comment_id: int):
+    if (comment := await Comment.objects.get_or_none(id=comment_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Comment of given ID: {comment_id} not found")
+    return comment
+
+
+# Read Comments - Pagination (Read All Comments From Post of Given ID) 
+@app.get("/read_comments/{post_id}/{page_number}")
+async def read_comments(post_id: int, page_number: int):
+    if await Post.objects.get_or_none(id=post_id) is None:
+        raise HTTPException(status_code=404, detail=f"Post of given ID: {post_id} not found")
+    if not (comments := await Comment.objects.filter(root_post=post_id).paginate(page=page_number).all()):
+        raise HTTPException(status_code=404, detail=f'Page {page_number} not found')
+    return comments
+
+
+# Update Comment
+@app.put("/update_comment/{comment_id}")
+async def update_comment(comment_id: int, data: CommentUpdate, user=Depends(auth_handler.auth_wrapper)):
+    if (comment := await Comment.objects.get_or_none(id=comment_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Comment of given ID: {comment_id} not found")
+    if user["username"] != comment.username and user["role"] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if data.username is not None and len(data.username) > 8 and user['role'] == 'admin':
+        await comment.update(username = data.username)
+    if data.content is not None and len(data.content) > 0:
+        await comment.update(content = data.content)
+    if data.date is not None:
+        await comment.update(date = data.date)
+    return comment
+
+
+# Delete Comment
+@app.delete("/delete_comment/{comment_id}", status_code=204)
+async def delete_comment(comment_id: int, user=Depends(auth_handler.auth_wrapper)):
+    if (comment := await Comment.objects.get_or_none(id=comment_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Comment of given ID: {comment_id} not found")
+    if user["username"] != comment.username and user["role"] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    await comment.delete()
 
 
 @app.post("/create_unit", response_model=Unit)
