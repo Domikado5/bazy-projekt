@@ -9,6 +9,7 @@ from app.db import CommentUpdate, database, AuthCredentials, User, UserUpdate, P
 
 from app.auth import AuthHandler
 import asyncpg
+import re
 
 app = FastAPI(title="Fitapka")
 
@@ -48,6 +49,10 @@ async def login(auth_cred: AuthCredentials):
 async def create_user(user: User):
     if await User.objects.get_or_none(username=user.username):
         raise HTTPException(status_code=400, detail='Username is taken')
+    if len(user.username) < 8:
+        raise HTTPException(status_code=400, detail='Username must be at least 8 characters long')
+    if not re.fullmatch(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', user.email):
+        raise HTTPException(status_code=400, detail='This is not a valid email address')
     if await User.objects.get_or_none(email=user.email):
         raise HTTPException(status_code=400, detail=f'User with email:{user.email} already exist')
     if len(user.password) < 8 or\
@@ -90,6 +95,8 @@ async def update_user(user_id: int, update_data: UserUpdate, user=Depends(auth_h
     if update_data.username is not None:
         if await User.objects.get_or_none(username=update_data.username):
             raise HTTPException(status_code=400, detail='Username is taken')
+        if len(update_data.username) < 8:
+            raise HTTPException(status_code=400, detail='Username must be at least 8 characters long')
         if Comment.objects.get_or_none(username=user_data.username) is not None:
             await Comment.objects.filter(username=user_data.username).update(each=True, username=update_data.username)
         await user_data.update(username=update_data.username)
@@ -101,6 +108,8 @@ async def update_user(user_id: int, update_data: UserUpdate, user=Depends(auth_h
             raise HTTPException(status_code=400, detail='Your password must be at least 8 characters long, contain at least one number and have a mixture of uppercase and lowercase letters.')
         await user_data.update(password=update_data.password)
     if update_data.email is not None:
+        if not re.fullmatch(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', update_data.email):
+            raise HTTPException(status_code=400, detail='This is not a valid email address')
         if await User.objects.get_or_none(email=update_data.email):
             raise HTTPException(status_code=400, detail=f'User with email:{update_data.email} already exist')
         await user_data.update(email=update_data.email)
@@ -229,6 +238,7 @@ async def delete_comment(comment_id: int, user=Depends(auth_handler.auth_wrapper
     await comment.delete()
 
 
+# Create Unit
 @app.post("/create_unit", response_model=Unit)
 async def create_unit(unit: Unit):
     return await unit.save()
