@@ -11,11 +11,11 @@ Main:
 - [x] Make ERD diagram.
 - [x] Configure docker for postgres and Python/FastAPI.
 - [x] Create db in Postgres.
-- [ ] Make CRUD in FastAPI
+- [ ] Make CRUD in FastAPI (4/11)
     - [x] CRUD for User model
     - [x] CRUD for Post model
-    - [ ] CRUD for Comment model
-    - [ ] CRUD for Unit model
+    - [x] CRUD for Comment model
+    - [x] CRUD for Unit model
     - [ ] CRUD for Allergen model
     - [ ] CRUD for Product model
     - [ ] CRUD for ProductCategory model
