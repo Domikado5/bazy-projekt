@@ -102,6 +102,10 @@ class Allergen(ormar.Model):
     allergen: str = ormar.String(max_length=128, nullable=False)
 
 
+class AllergenUpdate(BaseModel):
+    allergen: Optional[str] = None
+
+
 ProductCategoryRef = ForwardRef("ProductCategory")
 
 

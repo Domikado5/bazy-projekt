@@ -5,7 +5,7 @@ from os import stat
 from asyncpg.connection import connect
 from fastapi import FastAPI, HTTPException, Depends
 from app.db import database, AuthCredentials, User, UserUpdate, Post, PostUpdate, Comment, CommentUpdate, Unit, UnitUpdate,\
-     Allergen, ProductCategory, Product, Entry, Diary, SetCategory, Set
+     Allergen, AllergenUpdate, ProductCategory, Product, Entry, Diary, SetCategory, Set
 
 from app.auth import AuthHandler
 import asyncpg
@@ -294,13 +294,67 @@ async def delete_unit(unit_id: int, user=Depends(auth_handler.auth_wrapper)):
     
     await unit.delete()
 
-
+# Create Allergen
 @app.post("/create_allergen", response_model=Allergen)
-async def create_allergen(allergen: Allergen):
+async def create_allergen(allergen: Allergen, user=Depends(auth_handler.auth_wrapper)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if len(allergen.allergen) == 0:
+        raise HTTPException(status_code=400, detail="Allergen cannot be empty string")
+    if await Allergen.objects.get_or_none(allergen=allergen.allergen) is not None:
+        raise HTTPException(status_code=400, detail=f"Allergen {allergen.allergen} already exist")
     return await allergen.save()
 
 
-@app.post("/create_product_categorie", response_model=ProductCategory)
+# Read Allergen
+@app.get("/read_allergen/{allergen_id}")
+async def read_allergen(allergen_id: int):
+    if (allergen := await Allergen.objects.get_or_none(id=allergen_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Allergen of given ID: {allergen_id} not found")
+    return allergen
+
+
+# Read Allergens - all
+@app.get("/read_allergens")
+async def read_allergens_all():
+    return await Allergen.objects.all()
+
+
+# Read Allergens - pagination
+@app.get("/read_allergens/{page_number}")
+async def read_allergens(page_number: int):
+    if not (allergens := await Allergen.objects.paginate(page=page_number).all()):
+        raise HTTPException(status_code=404, detail=f'Page {page_number} not found')
+    return allergens
+
+
+# Update Allergen
+@app.put("/update_allergen/{allergen_id}")
+async def update_allergens(allergen_id: int, data: AllergenUpdate, user=Depends(auth_handler.auth_wrapper)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if (allergen := await Allergen.objects.get_or_none(id=allergen_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Allergen of given ID: {allergen_id} not found")
+    if data.allergen is not None:
+        if len(data.allergen) == 0:
+            raise HTTPException(status_code=400, detail="Allergen cannot be empty string")
+        if await Allergen.objects.get_or_none(allergen=data.allergen) is not None:
+            raise HTTPException(status_code=400, detail=f"Allergen {data.allergen} already exist")
+        await allergen.update(allergen=data.allergen)
+    return allergen
+    
+
+# Delete Allergen
+@app.delete("/delete_allergen/{allergen_id}", status_code=204)
+async def delete_allergen(allergen_id: int, user=Depends(auth_handler.auth_wrapper)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if (allergen := await Allergen.objects.get_or_none(id=allergen_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Allergen of given ID: {allergen_id} not found")
+    await allergen.delete()
+
+# Create Product Category
+@app.post("/create_product_category", response_model=ProductCategory)
 async def create_product_category(product_category: ProductCategory):
     return await product_category.save()
 

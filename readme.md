@@ -16,7 +16,7 @@ Main:
     - [x] CRUD for Post model
     - [x] CRUD for Comment model
     - [x] CRUD for Unit model
-    - [ ] CRUD for Allergen model
+    - [x] CRUD for Allergen model
     - [ ] CRUD for Product model
     - [ ] CRUD for ProductCategory model
     - [ ] CRUD for Entry model
