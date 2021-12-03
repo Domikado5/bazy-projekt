@@ -1,4 +1,4 @@
-from typing import ForwardRef, Optional
+from typing import ForwardRef, Optional, Union
 import databases
 import ormar
 import sqlalchemy
@@ -122,6 +122,10 @@ class ProductCategory(ormar.Model):
 
 ProductCategory.update_forward_refs()
 
+
+class ProductCategoryUpdate(BaseModel):
+    category_name: Optional[str] = None
+    root_category: Union[int, None]
 
 class Product(ormar.Model):
     class Meta(BaseMeta):

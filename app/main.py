@@ -4,8 +4,27 @@ from datetime import datetime
 from os import stat
 from asyncpg.connection import connect
 from fastapi import FastAPI, HTTPException, Depends
-from app.db import database, AuthCredentials, User, UserUpdate, Post, PostUpdate, Comment, CommentUpdate, Unit, UnitUpdate,\
-     Allergen, AllergenUpdate, ProductCategory, Product, Entry, Diary, SetCategory, Set
+from app.db import (
+    database,
+    AuthCredentials,
+    User,
+    UserUpdate,
+    Post,
+    PostUpdate,
+    Comment,
+    CommentUpdate,
+    Unit,
+    UnitUpdate,
+    Allergen,
+    AllergenUpdate,
+    ProductCategory,
+    ProductCategoryUpdate,
+    Product,
+    Entry,
+    Diary,
+    SetCategory,
+    Set,
+)
 
 from app.auth import AuthHandler
 import asyncpg
@@ -19,12 +38,12 @@ auth_handler = AuthHandler()
 # Remove it later
 @app.get("/fill_db")
 async def fill_db():
-    conn = await asyncpg.connect('postgresql://fitapka:fitapka@db:5432/fitapka')
+    conn = await asyncpg.connect("postgresql://fitapka:fitapka@db:5432/fitapka")
     tran = conn.transaction()
     await tran.start()
-    with open('db/Inserts.pgsql', 'r') as f:
+    with open("db/Inserts.pgsql", "r") as f:
         for line in f:
-            if 'INSERT' in line:
+            if "INSERT" in line:
                 await conn.execute(line)
     await tran.commit()
     await conn.close()
@@ -39,27 +58,41 @@ async def fill_db():
 @app.post("/login")
 async def login(auth_cred: AuthCredentials):
     user = await User.objects.get_or_none(username=auth_cred.username)
-    if (user is None) or (not auth_handler.verify_password(auth_cred.password, user.password)):
-        raise HTTPException(status_code=401, detail='Invalid username and/or password')
+    if (user is None) or (
+        not auth_handler.verify_password(auth_cred.password, user.password)
+    ):
+        raise HTTPException(status_code=401, detail="Invalid username and/or password")
     token = auth_handler.encode_token(user)
-    return {'token': token}
+    return {"token": token}
+
 
 # Create User
 @app.post("/register", response_model=User)
 async def create_user(user: User):
     if await User.objects.get_or_none(username=user.username):
-        raise HTTPException(status_code=400, detail='Username is taken')
+        raise HTTPException(status_code=400, detail="Username is taken")
     if len(user.username) < 8:
-        raise HTTPException(status_code=400, detail='Username must be at least 8 characters long')
-    if not re.fullmatch(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', user.email):
-        raise HTTPException(status_code=400, detail='This is not a valid email address')
+        raise HTTPException(
+            status_code=400, detail="Username must be at least 8 characters long"
+        )
+    if not re.fullmatch(
+        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", user.email
+    ):
+        raise HTTPException(status_code=400, detail="This is not a valid email address")
     if await User.objects.get_or_none(email=user.email):
-        raise HTTPException(status_code=400, detail=f'User with email:{user.email} already exist')
-    if len(user.password) < 8 or\
-            not any(char.isdigit() for char in user.password) or\
-            not any(char.isupper() for char in user.password) or\
-            not any(char.islower() for char in user.password):
-        raise HTTPException(status_code=400, detail='Your password must be at least 8 characters long, contain at least one number and have a mixture of uppercase and lowercase letters.')
+        raise HTTPException(
+            status_code=400, detail=f"User with email:{user.email} already exist"
+        )
+    if (
+        len(user.password) < 8
+        or not any(char.isdigit() for char in user.password)
+        or not any(char.isupper() for char in user.password)
+        or not any(char.islower() for char in user.password)
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Your password must be at least 8 characters long, contain at least one number and have a mixture of uppercase and lowercase letters.",
+        )
     user.password = auth_handler.get_password_hash(user.password)
     # TODO check if role is provided and prevent creating writers and admins!!!!
     return await user.save()
@@ -71,7 +104,9 @@ async def read_user(user_id: int, user=Depends(auth_handler.auth_wrapper)):
     if user_id != user["id"] and user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorize")
     if (user_data := await User.objects.get_or_none(id=user_id)) is None:
-        raise HTTPException(status_code=404, detail=f"User of given ID: {user_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"User of given ID: {user_id} not found"
+        )
     return user_data
 
 
@@ -81,40 +116,60 @@ async def read_users(page_number: int, user=Depends(auth_handler.auth_wrapper)):
     if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorize")
     if not (users := await User.objects.paginate(page_number).all()):
-        raise HTTPException(status_code=404, detail=f'Page {page_number} not found')
+        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     return users
 
 
 # Update User
 @app.put("/update_user/{user_id}")
-async def update_user(user_id: int, update_data: UserUpdate, user=Depends(auth_handler.auth_wrapper)):
+async def update_user(
+    user_id: int, update_data: UserUpdate, user=Depends(auth_handler.auth_wrapper)
+):
     if (user_data := await User.objects.get_or_none(id=user_id)) is None:
-        raise HTTPException(status_code=404, detail=f"User of given ID: {user_id} not found")
-    if user_data.id != user['id'] and user['role'] != 'admin':
+        raise HTTPException(
+            status_code=404, detail=f"User of given ID: {user_id} not found"
+        )
+    if user_data.id != user["id"] and user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
     if update_data.username is not None:
         if await User.objects.get_or_none(username=update_data.username):
-            raise HTTPException(status_code=400, detail='Username is taken')
+            raise HTTPException(status_code=400, detail="Username is taken")
         if len(update_data.username) < 8:
-            raise HTTPException(status_code=400, detail='Username must be at least 8 characters long')
+            raise HTTPException(
+                status_code=400, detail="Username must be at least 8 characters long"
+            )
         if Comment.objects.get_or_none(username=user_data.username) is not None:
-            await Comment.objects.filter(username=user_data.username).update(each=True, username=update_data.username)
+            await Comment.objects.filter(username=user_data.username).update(
+                each=True, username=update_data.username
+            )
         await user_data.update(username=update_data.username)
     if update_data.password is not None:
-        if len(update_data.password) < 8 or\
-            not any(char.isdigit() for char in update_data.password) or\
-            not any(char.isupper() for char in update_data.password) or\
-            not any(char.islower() for char in update_data.password):
-            raise HTTPException(status_code=400, detail='Your password must be at least 8 characters long, contain at least one number and have a mixture of uppercase and lowercase letters.')
+        if (
+            len(update_data.password) < 8
+            or not any(char.isdigit() for char in update_data.password)
+            or not any(char.isupper() for char in update_data.password)
+            or not any(char.islower() for char in update_data.password)
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Your password must be at least 8 characters long, contain at least one number and have a mixture of uppercase and lowercase letters.",
+            )
         await user_data.update(password=update_data.password)
     if update_data.email is not None:
-        if not re.fullmatch(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', update_data.email):
-            raise HTTPException(status_code=400, detail='This is not a valid email address')
+        if not re.fullmatch(
+            r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", update_data.email
+        ):
+            raise HTTPException(
+                status_code=400, detail="This is not a valid email address"
+            )
         if await User.objects.get_or_none(email=update_data.email):
-            raise HTTPException(status_code=400, detail=f'User with email:{update_data.email} already exist')
+            raise HTTPException(
+                status_code=400,
+                detail=f"User with email:{update_data.email} already exist",
+            )
         await user_data.update(email=update_data.email)
-    if update_data.role is not None and user['role'] == 'admin':
-        if update_data.role in ['user', 'writer', 'admin']:
+    if update_data.role is not None and user["role"] == "admin":
+        if update_data.role in ["user", "writer", "admin"]:
             await user_data.update(role=update_data.role)
     return user_data
 
@@ -122,10 +177,12 @@ async def update_user(user_id: int, update_data: UserUpdate, user=Depends(auth_h
 # Delete User
 @app.delete("/delete_user/{user_id}", status_code=204)
 async def delete_user(user_id: int, user=Depends(auth_handler.auth_wrapper)):
-    if user['role'] != 'admin' and user['id'] != user_id:
-        raise HTTPException(status_code=403, detail='Unauthorized')
+    if user["role"] != "admin" and user["id"] != user_id:
+        raise HTTPException(status_code=403, detail="Unauthorized")
     if (user_data := await User.objects.get_or_none(id=user_id)) is None:
-        raise HTTPException(status_code=404, detail=f"User of given ID: {user_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"User of given ID: {user_id} not found"
+        )
 
     await user_data.delete()
 
@@ -134,15 +191,18 @@ async def delete_user(user_id: int, user=Depends(auth_handler.auth_wrapper)):
 @app.post("/create_post", response_model=Post)
 async def create_post(post: Post, user=Depends(auth_handler.auth_wrapper)):
     post.author = user
-    if user['role'] == "user":
-        raise HTTPException(status_code=403, detail='Unauthorized')
+    if user["role"] == "user":
+        raise HTTPException(status_code=403, detail="Unauthorized")
     return await post.save()
+
 
 # Read Post - Only One
 @app.get("/read_post/{post_id}")
 async def read_post(post_id: int):
     if (post := await Post.objects.get_or_none(id=post_id)) is None:
-        raise HTTPException(status_code=404, detail=f'Post of given ID: {post_id} don\'t exist')
+        raise HTTPException(
+            status_code=404, detail=f"Post of given ID: {post_id} don't exist"
+        )
     return post
 
 
@@ -150,18 +210,22 @@ async def read_post(post_id: int):
 @app.get("/read_posts/{page_number}")
 async def read_posts(page_number: int):
     if not (posts := await Post.objects.paginate(page_number).all()):
-        raise HTTPException(status_code=404, detail=f'Page {page_number} not found')
+        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     return posts
 
 
 # Update Posts
 @app.put("/update_post/{post_id}")
-async def update_post(post_id: int, content: PostUpdate, user=Depends(auth_handler.auth_wrapper)):
-    if user['role'] not in ['writer', 'admin']:
+async def update_post(
+    post_id: int, content: PostUpdate, user=Depends(auth_handler.auth_wrapper)
+):
+    if user["role"] not in ["writer", "admin"]:
         raise HTTPException(status_code=403, detail="Unauthorized")
     if (post := await Post.objects.get_or_none(id=post_id)) is None:
-        raise HTTPException(status_code=404, detail=f"Post of given ID: {post_id} not found")
-    if post.author.id != user['id'] and user['role'] != 'admin':
+        raise HTTPException(
+            status_code=404, detail=f"Post of given ID: {post_id} not found"
+        )
+    if post.author.id != user["id"] and user["role"] != "admin":
         raise HTTPException(status_code=403, detail="You are not the post author")
     if content.title is not None:
         await post.update(title=content.title)
@@ -175,22 +239,28 @@ async def update_post(post_id: int, content: PostUpdate, user=Depends(auth_handl
 # Delete Posts
 @app.delete("/delete_post/{post_id}", status_code=204)
 async def delete_post(post_id: int, user=Depends(auth_handler.auth_wrapper)):
-    if user['role'] == 'user':
+    if user["role"] == "user":
         raise HTTPException(status_code=403, detail="Unauthorized")
     if (post := await Post.objects.get_or_none(id=post_id)) is None:
-        raise HTTPException(status_code=404, detail=f"Post of given ID: {post_id} not found")
-    if (post.author.id != user['id'] and user['role'] == "writer"):
+        raise HTTPException(
+            status_code=404, detail=f"Post of given ID: {post_id} not found"
+        )
+    if post.author.id != user["id"] and user["role"] == "writer":
         raise HTTPException(status_code=403, detail="Unauthorized")
-    
+
     await post.delete()
+
 
 # Create Comments
 @app.post("/create_comment", response_model=Comment)
 async def create_comment(comment: Comment, user=Depends(auth_handler.auth_wrapper)):
     if await Post.objects.get_or_none(id=comment.root_post) is None:
-        raise HTTPException(status_code=404, detail=f"Root Post of given ID: {comment.root_post} not found")
-    comment.username = user['username']
-    
+        raise HTTPException(
+            status_code=404,
+            detail=f"Root Post of given ID: {comment.root_post} not found",
+        )
+    comment.username = user["username"]
+
     return await comment.save()
 
 
@@ -198,33 +268,45 @@ async def create_comment(comment: Comment, user=Depends(auth_handler.auth_wrappe
 @app.get("/read_comment/{comment_id}")
 async def read_comment(comment_id: int):
     if (comment := await Comment.objects.get_or_none(id=comment_id)) is None:
-        raise HTTPException(status_code=404, detail=f"Comment of given ID: {comment_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Comment of given ID: {comment_id} not found"
+        )
     return comment
 
 
-# Read Comments - Pagination (Read All Comments From Post of Given ID) 
+# Read Comments - Pagination (Read All Comments From Post of Given ID)
 @app.get("/read_comments/{post_id}/{page_number}")
 async def read_comments(post_id: int, page_number: int):
     if await Post.objects.get_or_none(id=post_id) is None:
-        raise HTTPException(status_code=404, detail=f"Post of given ID: {post_id} not found")
-    if not (comments := await Comment.objects.filter(root_post=post_id).paginate(page=page_number).all()):
-        raise HTTPException(status_code=404, detail=f'Page {page_number} not found')
+        raise HTTPException(
+            status_code=404, detail=f"Post of given ID: {post_id} not found"
+        )
+    if not (
+        comments := await Comment.objects.filter(root_post=post_id)
+        .paginate(page=page_number)
+        .all()
+    ):
+        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     return comments
 
 
 # Update Comment
 @app.put("/update_comment/{comment_id}")
-async def update_comment(comment_id: int, data: CommentUpdate, user=Depends(auth_handler.auth_wrapper)):
+async def update_comment(
+    comment_id: int, data: CommentUpdate, user=Depends(auth_handler.auth_wrapper)
+):
     if (comment := await Comment.objects.get_or_none(id=comment_id)) is None:
-        raise HTTPException(status_code=404, detail=f"Comment of given ID: {comment_id} not found")
-    if user["username"] != comment.username and user["role"] != 'admin':
+        raise HTTPException(
+            status_code=404, detail=f"Comment of given ID: {comment_id} not found"
+        )
+    if user["username"] != comment.username and user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
-    if data.username is not None and len(data.username) > 8 and user['role'] == 'admin':
-        await comment.update(username = data.username)
+    if data.username is not None and len(data.username) > 8 and user["role"] == "admin":
+        await comment.update(username=data.username)
     if data.content is not None and len(data.content) > 0:
-        await comment.update(content = data.content)
+        await comment.update(content=data.content)
     if data.date is not None:
-        await comment.update(date = data.date)
+        await comment.update(date=data.date)
     return comment
 
 
@@ -232,8 +314,10 @@ async def update_comment(comment_id: int, data: CommentUpdate, user=Depends(auth
 @app.delete("/delete_comment/{comment_id}", status_code=204)
 async def delete_comment(comment_id: int, user=Depends(auth_handler.auth_wrapper)):
     if (comment := await Comment.objects.get_or_none(id=comment_id)) is None:
-        raise HTTPException(status_code=404, detail=f"Comment of given ID: {comment_id} not found")
-    if user["username"] != comment.username and user["role"] != 'admin':
+        raise HTTPException(
+            status_code=404, detail=f"Comment of given ID: {comment_id} not found"
+        )
+    if user["username"] != comment.username and user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
     await comment.delete()
 
@@ -242,7 +326,7 @@ async def delete_comment(comment_id: int, user=Depends(auth_handler.auth_wrapper
 @app.post("/create_unit", response_model=Unit)
 async def create_unit(unit: Unit, user=Depends(auth_handler.auth_wrapper)):
     if await Unit.objects.get_or_none(unitname=unit.unitname) is not None:
-        raise HTTPException(status_code=400, detail='This unit already exist')
+        raise HTTPException(status_code=400, detail="This unit already exist")
     if len(unit.unitname) == 0:
         raise HTTPException(status_code=400, detail="Unit need at least one character!")
     return await unit.save()
@@ -252,31 +336,37 @@ async def create_unit(unit: Unit, user=Depends(auth_handler.auth_wrapper)):
 @app.get("/read_unit/{unit_id}")
 async def read_unit(unit_id: int):
     if (unit := await Unit.objects.get_or_none(id=unit_id)) is None:
-        raise HTTPException(status_code=404, detail=f"Unit of given ID: {unit_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Unit of given ID: {unit_id} not found"
+        )
     return unit
 
 
 # Read Units - All
 @app.get("/read_units")
-async def read_units():    
+async def read_units():
     return await Unit.objects.all()
 
 
 # Read Units - Pagination
 @app.get("/read_units/{page_number}")
-async def read_units(page_number: int):    
+async def read_units(page_number: int):
     if not (units := await Unit.objects.paginate(page_number).all()):
-        raise HTTPException(status_code=404, detail=f'Page {page_number} not found')
+        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     return units
 
 
 # Update Unit
 @app.put("/update_unit/{unit_id}")
-async def update_unit(unit_id: int, data: UnitUpdate, user=Depends(auth_handler.auth_wrapper)):
+async def update_unit(
+    unit_id: int, data: UnitUpdate, user=Depends(auth_handler.auth_wrapper)
+):
     if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
     if (unit := await Unit.objects.get_or_none(id=unit_id)) is None:
-        raise HTTPException(status_code=404, detail=f"Unit of given ID: {unit_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Unit of given ID: {unit_id} not found"
+        )
     if len(data.unitname) == 0:
         raise HTTPException(status_code=400, detail="Unit need at least one character!")
     if await Unit.objects.get_or_none(unitname=data.unitname) is not None:
@@ -284,15 +374,19 @@ async def update_unit(unit_id: int, data: UnitUpdate, user=Depends(auth_handler.
 
     return await unit.update(unitname=data.unitname)
 
+
 # Delete Unit
 @app.delete("/delete_unit/{unit_id}", status_code=204)
 async def delete_unit(unit_id: int, user=Depends(auth_handler.auth_wrapper)):
     if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
     if (unit := await Unit.objects.get_or_none(id=unit_id)) is None:
-        raise HTTPException(status_code=404, detail=f"Unit of given ID: {unit_id} not found")
-    
+        raise HTTPException(
+            status_code=404, detail=f"Unit of given ID: {unit_id} not found"
+        )
+
     await unit.delete()
+
 
 # Create Allergen
 @app.post("/create_allergen", response_model=Allergen)
@@ -302,7 +396,9 @@ async def create_allergen(allergen: Allergen, user=Depends(auth_handler.auth_wra
     if len(allergen.allergen) == 0:
         raise HTTPException(status_code=400, detail="Allergen cannot be empty string")
     if await Allergen.objects.get_or_none(allergen=allergen.allergen) is not None:
-        raise HTTPException(status_code=400, detail=f"Allergen {allergen.allergen} already exist")
+        raise HTTPException(
+            status_code=400, detail=f"Allergen {allergen.allergen} already exist"
+        )
     return await allergen.save()
 
 
@@ -310,7 +406,9 @@ async def create_allergen(allergen: Allergen, user=Depends(auth_handler.auth_wra
 @app.get("/read_allergen/{allergen_id}")
 async def read_allergen(allergen_id: int):
     if (allergen := await Allergen.objects.get_or_none(id=allergen_id)) is None:
-        raise HTTPException(status_code=404, detail=f"Allergen of given ID: {allergen_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Allergen of given ID: {allergen_id} not found"
+        )
     return allergen
 
 
@@ -324,25 +422,33 @@ async def read_allergens_all():
 @app.get("/read_allergens/{page_number}")
 async def read_allergens(page_number: int):
     if not (allergens := await Allergen.objects.paginate(page=page_number).all()):
-        raise HTTPException(status_code=404, detail=f'Page {page_number} not found')
+        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     return allergens
 
 
 # Update Allergen
 @app.put("/update_allergen/{allergen_id}")
-async def update_allergens(allergen_id: int, data: AllergenUpdate, user=Depends(auth_handler.auth_wrapper)):
+async def update_allergens(
+    allergen_id: int, data: AllergenUpdate, user=Depends(auth_handler.auth_wrapper)
+):
     if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
     if (allergen := await Allergen.objects.get_or_none(id=allergen_id)) is None:
-        raise HTTPException(status_code=404, detail=f"Allergen of given ID: {allergen_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Allergen of given ID: {allergen_id} not found"
+        )
     if data.allergen is not None:
         if len(data.allergen) == 0:
-            raise HTTPException(status_code=400, detail="Allergen cannot be empty string")
+            raise HTTPException(
+                status_code=400, detail="Allergen cannot be empty string"
+            )
         if await Allergen.objects.get_or_none(allergen=data.allergen) is not None:
-            raise HTTPException(status_code=400, detail=f"Allergen {data.allergen} already exist")
+            raise HTTPException(
+                status_code=400, detail=f"Allergen {data.allergen} already exist"
+            )
         await allergen.update(allergen=data.allergen)
     return allergen
-    
+
 
 # Delete Allergen
 @app.delete("/delete_allergen/{allergen_id}", status_code=204)
@@ -350,13 +456,146 @@ async def delete_allergen(allergen_id: int, user=Depends(auth_handler.auth_wrapp
     if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
     if (allergen := await Allergen.objects.get_or_none(id=allergen_id)) is None:
-        raise HTTPException(status_code=404, detail=f"Allergen of given ID: {allergen_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Allergen of given ID: {allergen_id} not found"
+        )
     await allergen.delete()
+
 
 # Create Product Category
 @app.post("/create_product_category", response_model=ProductCategory)
-async def create_product_category(product_category: ProductCategory):
+async def create_product_category(
+    product_category: ProductCategory, user=Depends(auth_handler.auth_wrapper)
+):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if len(product_category.category_name) == 0:
+        raise HTTPException(
+            status_code=400, detail="Product Category Name cannot be empty string"
+        )
+    if (
+        await ProductCategory.objects.get_or_none(
+            category_name=product_category.category_name
+        )
+        is not None
+    ):
+        raise HTTPException(
+            status_code=400, detail="This Product Category already exist"
+        )
+    if (
+        product_category.root_category is not None
+        and (
+            root_category := await ProductCategory.objects.get_or_none(
+                id=product_category.root_category
+            )
+        )
+        is None
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Root Category: Product Category of given ID: {product_category.root_category} not found",
+        )
+    product_category.root_category = root_category
     return await product_category.save()
+
+
+# Read Product Category
+@app.get("/read_product_category/{category_id}")
+async def read_product_category(category_id: int):
+    if (
+        product_category := await ProductCategory.objects.get_or_none(id=category_id)
+    ) is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Product Category of given ID: {category_id} not found",
+        )
+    return product_category
+
+
+# Read Product Categories - All
+@app.get("/read_product_categories")
+async def read_product_categories_all():
+    return await ProductCategory.objects.all()
+
+
+# Read Product Categories - Pagination
+@app.get("/read_product_categories/{page_number}")
+async def read_product_categories(page_number: int):
+    if not (
+        product_categories := await ProductCategory.objects.paginate(
+            page=page_number
+        ).all()
+    ):
+        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
+    return product_categories
+
+
+# Update Product Category
+@app.put("/update_product_category/{category_id}")
+async def upate_product_category(
+    category_id: int,
+    data: ProductCategoryUpdate,
+    user=Depends(auth_handler.auth_wrapper),
+):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if (
+        product_category := await ProductCategory.objects.get_or_none(id=category_id)
+    ) is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Product Category of given ID: {category_id} not found",
+        )
+    if data.category_name is not None:
+        if len(data.category_name) == 0:
+            raise HTTPException(
+                status_code=400, detail="Product Category Name cannot be empty string"
+            )
+        if (
+            await ProductCategory.objects.get_or_none(category_name=data.category_name)
+            is not None
+        ):
+            raise HTTPException(
+                status_code=400, detail="This Product Category already exist"
+            )
+        await product_category.update(category_name=data.category_name)
+    if (
+        data.root_category is not None
+        and (await ProductCategory.objects.get_or_none(id=data.root_category)) is None
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Root Category: Product Category of given ID: {product_category.root_category} not found",
+        )
+    if data.root_category is None and product_category.root_category is not None:
+        child_categories = (
+            await product_category.root_category.root_categories.select_all().all()
+        )
+        for category in child_categories:
+            if category.id == product_category.id:
+                await product_category.root_category.root_categories.remove(category)
+        return category
+    else:
+        await product_category.update(root_category=data.root_category)
+
+    return product_category
+
+
+# Delete Product Category
+@app.delete("/delete_product_category/{category_id}", status_code=204)
+async def delete_product_category(
+    category_id: int, user=Depends(auth_handler.auth_wrapper)
+):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if (
+        product_category := await ProductCategory.objects.get_or_none(id=category_id)
+    ) is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Product Category of given ID: {category_id} not found",
+        )
+    await product_category.delete()
 
 
 @app.post("/create_product", response_model=Product)
@@ -386,10 +625,10 @@ async def create_set(set: Set):
 
 @app.on_event("startup")
 async def startup():
-    conn = await asyncpg.connect('postgresql://fitapka:fitapka@db:5432/fitapka')
+    conn = await asyncpg.connect("postgresql://fitapka:fitapka@db:5432/fitapka")
     tran = conn.transaction()
     await tran.start()
-    with open('db/AlterTable.pgsql', 'r') as f:
+    with open("db/AlterTable.pgsql", "r") as f:
         data = f.read()
         await conn.execute(data)
     await tran.commit()
