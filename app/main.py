@@ -4,6 +4,7 @@ from datetime import datetime
 from os import stat
 from asyncpg.connection import connect
 from fastapi import FastAPI, HTTPException, Depends
+from starlette.requests import empty_receive
 from app.db import (
     database,
     AuthCredentials,
@@ -20,6 +21,7 @@ from app.db import (
     ProductCategory,
     ProductCategoryUpdate,
     Product,
+    ProductUpdate,
     Entry,
     Diary,
     SetCategory,
@@ -99,29 +101,41 @@ async def create_user(user: User):
 
 
 # Read User
-@app.get("/user/{user_id}")
+@app.get("/users/{user_id}")
 async def read_user(user_id: int, user=Depends(auth_handler.auth_wrapper)):
     if user_id != user["id"] and user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorize")
-    if (user_data := await User.objects.get_or_none(id=user_id)) is None:
+    if (await User.objects.get_or_none(id=user_id)) is None:
         raise HTTPException(
             status_code=404, detail=f"User of given ID: {user_id} not found"
         )
-    return user_data
+    user_data = (
+        await User.objects.select_related(["diarys", "posts", "sets"])
+        .filter(id=user_id)
+        .all()
+    )
+    return user_data[0].dict(exclude_through_models=True)
 
 
 # Read Users - Pagination
-@app.get("/users/{page_number}")
+@app.get("/users/page/{page_number}")
 async def read_users(page_number: int, user=Depends(auth_handler.auth_wrapper)):
     if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorize")
-    if not (users := await User.objects.paginate(page_number).all()):
+    if not (await User.objects.paginate(page_number).all()):
         raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
+    users = []
+    for user_data in (
+        await User.objects.select_related(["diarys", "posts", "sets"])
+        .paginate(page_number)
+        .all()
+    ):
+        users.append(user_data.dict(exclude_through_models=True))
     return users
 
 
 # Update User
-@app.put("/update_user/{user_id}")
+@app.put("/users/{user_id}")
 async def update_user(
     user_id: int, update_data: UserUpdate, user=Depends(auth_handler.auth_wrapper)
 ):
@@ -131,6 +145,7 @@ async def update_user(
         )
     if user_data.id != user["id"] and user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
+    flags = []
     if update_data.username is not None:
         if await User.objects.get_or_none(username=update_data.username):
             raise HTTPException(status_code=400, detail="Username is taken")
@@ -142,7 +157,7 @@ async def update_user(
             await Comment.objects.filter(username=user_data.username).update(
                 each=True, username=update_data.username
             )
-        await user_data.update(username=update_data.username)
+        flags.append("username")
     if update_data.password is not None:
         if (
             len(update_data.password) < 8
@@ -154,7 +169,7 @@ async def update_user(
                 status_code=400,
                 detail="Your password must be at least 8 characters long, contain at least one number and have a mixture of uppercase and lowercase letters.",
             )
-        await user_data.update(password=update_data.password)
+        flags.append("password")
     if update_data.email is not None:
         if not re.fullmatch(
             r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", update_data.email
@@ -167,10 +182,16 @@ async def update_user(
                 status_code=400,
                 detail=f"User with email:{update_data.email} already exist",
             )
-        await user_data.update(email=update_data.email)
+        flags.append("email")
     if update_data.role is not None and user["role"] == "admin":
         if update_data.role in ["user", "writer", "admin"]:
             await user_data.update(role=update_data.role)
+    if "username" in flags:
+        await user_data.update(username=update_data.username)
+    if "password" in flags:
+        await user_data.update(password=update_data.password)
+    if "email" in flags:
+        await user_data.update(email=update_data.email)
     return user_data
 
 
@@ -188,34 +209,44 @@ async def delete_user(user_id: int, user=Depends(auth_handler.auth_wrapper)):
 
 
 # Create Post
-@app.post("/create_post", response_model=Post)
+@app.post("/posts", response_model=Post)
 async def create_post(post: Post, user=Depends(auth_handler.auth_wrapper)):
     post.author = user
     if user["role"] == "user":
         raise HTTPException(status_code=403, detail="Unauthorized")
+    if await Post.objects.get_or_none(title=post.title) is not None:
+        raise HTTPException(
+            status_code=400, detail="Post with this title already exists"
+        )
     return await post.save()
 
 
 # Read Post - Only One
-@app.get("/read_post/{post_id}")
+@app.get("/posts/{post_id}")
 async def read_post(post_id: int):
-    if (post := await Post.objects.get_or_none(id=post_id)) is None:
+    if (await Post.objects.get_or_none(id=post_id)) is None:
         raise HTTPException(
             status_code=404, detail=f"Post of given ID: {post_id} don't exist"
         )
-    return post
+    post = await Post.objects.select_related(["comments"]).filter(id=post_id).all()
+    return post[0].dict(exclude_through_models=True)
 
 
 # Read Posts - Pagination
-@app.get("/read_posts/{page_number}")
+@app.get("/posts/page/{page_number}")
 async def read_posts(page_number: int):
-    if not (posts := await Post.objects.paginate(page_number).all()):
+    if not (await Post.objects.paginate(page_number).all()):
         raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
+    posts = []
+    for post in (
+        await Post.objects.select_related(["comments"]).paginate(page_number).all()
+    ):
+        posts.append(post.dict(exclude_through_models=True))
     return posts
 
 
 # Update Posts
-@app.put("/update_post/{post_id}")
+@app.put("/posts/{post_id}")
 async def update_post(
     post_id: int, content: PostUpdate, user=Depends(auth_handler.auth_wrapper)
 ):
@@ -227,7 +258,11 @@ async def update_post(
         )
     if post.author.id != user["id"] and user["role"] != "admin":
         raise HTTPException(status_code=403, detail="You are not the post author")
-    if content.title is not None:
+    if content.title is not None and len(content.title) > 0:
+        if await Post.objects.get_or_none(title=content.title) is not None:
+            raise HTTPException(
+                status_code=400, detail="Post with this title already exists"
+            )
         await post.update(title=content.title)
     if content.content is not None:
         await post.update(content=content.content)
@@ -237,7 +272,7 @@ async def update_post(
 
 
 # Delete Posts
-@app.delete("/delete_post/{post_id}", status_code=204)
+@app.delete("/posts/{post_id}", status_code=204)
 async def delete_post(post_id: int, user=Depends(auth_handler.auth_wrapper)):
     if user["role"] == "user":
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -252,7 +287,7 @@ async def delete_post(post_id: int, user=Depends(auth_handler.auth_wrapper)):
 
 
 # Create Comments
-@app.post("/create_comment", response_model=Comment)
+@app.post("/comments", response_model=Comment)
 async def create_comment(comment: Comment, user=Depends(auth_handler.auth_wrapper)):
     if await Post.objects.get_or_none(id=comment.root_post) is None:
         raise HTTPException(
@@ -265,7 +300,7 @@ async def create_comment(comment: Comment, user=Depends(auth_handler.auth_wrappe
 
 
 # Read Comment
-@app.get("/read_comment/{comment_id}")
+@app.get("/comments/{comment_id}")
 async def read_comment(comment_id: int):
     if (comment := await Comment.objects.get_or_none(id=comment_id)) is None:
         raise HTTPException(
@@ -275,7 +310,7 @@ async def read_comment(comment_id: int):
 
 
 # Read Comments - Pagination (Read All Comments From Post of Given ID)
-@app.get("/read_comments/{post_id}/{page_number}")
+@app.get("/comments/{post_id}/page/{page_number}")
 async def read_comments(post_id: int, page_number: int):
     if await Post.objects.get_or_none(id=post_id) is None:
         raise HTTPException(
@@ -291,7 +326,7 @@ async def read_comments(post_id: int, page_number: int):
 
 
 # Update Comment
-@app.put("/update_comment/{comment_id}")
+@app.put("/comments/{comment_id}")
 async def update_comment(
     comment_id: int, data: CommentUpdate, user=Depends(auth_handler.auth_wrapper)
 ):
@@ -311,7 +346,7 @@ async def update_comment(
 
 
 # Delete Comment
-@app.delete("/delete_comment/{comment_id}", status_code=204)
+@app.delete("/comments/{comment_id}", status_code=204)
 async def delete_comment(comment_id: int, user=Depends(auth_handler.auth_wrapper)):
     if (comment := await Comment.objects.get_or_none(id=comment_id)) is None:
         raise HTTPException(
@@ -323,7 +358,7 @@ async def delete_comment(comment_id: int, user=Depends(auth_handler.auth_wrapper
 
 
 # Create Unit
-@app.post("/create_unit", response_model=Unit)
+@app.post("/units", response_model=Unit)
 async def create_unit(unit: Unit, user=Depends(auth_handler.auth_wrapper)):
     if await Unit.objects.get_or_none(unitname=unit.unitname) is not None:
         raise HTTPException(status_code=400, detail="This unit already exist")
@@ -333,31 +368,27 @@ async def create_unit(unit: Unit, user=Depends(auth_handler.auth_wrapper)):
 
 
 # Read Unit
-@app.get("/read_unit/{unit_id}")
+@app.get("/units/{unit_id}")
 async def read_unit(unit_id: int):
-    if (unit := await Unit.objects.get_or_none(id=unit_id)) is None:
+    if (await Unit.objects.get_or_none(id=unit_id)) is None:
         raise HTTPException(
             status_code=404, detail=f"Unit of given ID: {unit_id} not found"
         )
-    return unit
+    unit = await Unit.objects.select_related(["products"]).filter(id=unit_id).all()
+    return unit[0].dict(exclude_through_models=True)
 
 
 # Read Units - All
-@app.get("/read_units")
+@app.get("/units")
 async def read_units():
-    return await Unit.objects.all()
-
-
-# Read Units - Pagination
-@app.get("/read_units/{page_number}")
-async def read_units(page_number: int):
-    if not (units := await Unit.objects.paginate(page_number).all()):
-        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
+    units = []
+    for unit in await Unit.objects.select_related(["products"]).all():
+        units.append(unit.dict(exclude_through_models=True))
     return units
 
 
 # Update Unit
-@app.put("/update_unit/{unit_id}")
+@app.put("/units/{unit_id}")
 async def update_unit(
     unit_id: int, data: UnitUpdate, user=Depends(auth_handler.auth_wrapper)
 ):
@@ -376,7 +407,7 @@ async def update_unit(
 
 
 # Delete Unit
-@app.delete("/delete_unit/{unit_id}", status_code=204)
+@app.delete("/units/{unit_id}", status_code=204)
 async def delete_unit(unit_id: int, user=Depends(auth_handler.auth_wrapper)):
     if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -389,7 +420,7 @@ async def delete_unit(unit_id: int, user=Depends(auth_handler.auth_wrapper)):
 
 
 # Create Allergen
-@app.post("/create_allergen", response_model=Allergen)
+@app.post("/allergens", response_model=Allergen)
 async def create_allergen(allergen: Allergen, user=Depends(auth_handler.auth_wrapper)):
     if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -403,31 +434,43 @@ async def create_allergen(allergen: Allergen, user=Depends(auth_handler.auth_wra
 
 
 # Read Allergen
-@app.get("/read_allergen/{allergen_id}")
+@app.get("/allergens/{allergen_id}")
 async def read_allergen(allergen_id: int):
-    if (allergen := await Allergen.objects.get_or_none(id=allergen_id)) is None:
+    if (
+        allergen := await Allergen.objects.select_related(["products"]).get_or_none(
+            id=allergen_id
+        )
+    ) is None:
         raise HTTPException(
             status_code=404, detail=f"Allergen of given ID: {allergen_id} not found"
         )
-    return allergen
+    return allergen.dict(exclude_through_models=True)
 
 
 # Read Allergens - all
-@app.get("/read_allergens")
+@app.get("/allergens")
 async def read_allergens_all():
-    return await Allergen.objects.all()
+    allergens = []
+    for allergen in await Allergen.objects.select_related(["products"]).all():
+        allergens.append(allergen.dict(exclude_through_models=True))
+    return allergens
 
 
 # Read Allergens - pagination
-@app.get("/read_allergens/{page_number}")
+@app.get("/allergens/page/{page_number}")
 async def read_allergens(page_number: int):
-    if not (allergens := await Allergen.objects.paginate(page=page_number).all()):
+    if not (await Allergen.objects.paginate(page=page_number).all()):
         raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
+    allergens = []
+    for allergen in (
+        await Allergen.objects.select_related(["products"]).paginate(page_number).all()
+    ):
+        allergens.append(allergen.dict(exclude_through_models=True))
     return allergens
 
 
 # Update Allergen
-@app.put("/update_allergen/{allergen_id}")
+@app.put("/allergens/{allergen_id}")
 async def update_allergens(
     allergen_id: int, data: AllergenUpdate, user=Depends(auth_handler.auth_wrapper)
 ):
@@ -451,7 +494,7 @@ async def update_allergens(
 
 
 # Delete Allergen
-@app.delete("/delete_allergen/{allergen_id}", status_code=204)
+@app.delete("/allergens/{allergen_id}", status_code=204)
 async def delete_allergen(allergen_id: int, user=Depends(auth_handler.auth_wrapper)):
     if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -463,7 +506,7 @@ async def delete_allergen(allergen_id: int, user=Depends(auth_handler.auth_wrapp
 
 
 # Create Product Category
-@app.post("/create_product_category", response_model=ProductCategory)
+@app.post("/product_categories", response_model=ProductCategory)
 async def create_product_category(
     product_category: ProductCategory, user=Depends(auth_handler.auth_wrapper)
 ):
@@ -500,38 +543,48 @@ async def create_product_category(
 
 
 # Read Product Category
-@app.get("/read_product_category/{category_id}")
+@app.get("/product_categories/{category_id}")
 async def read_product_category(category_id: int):
     if (
-        product_category := await ProductCategory.objects.get_or_none(id=category_id)
+        product_category := await ProductCategory.objects.select_related(
+            ["products", "root_categories"]
+        ).get_or_none(id=category_id)
     ) is None:
         raise HTTPException(
             status_code=404,
             detail=f"Product Category of given ID: {category_id} not found",
         )
-    return product_category
+    return product_category.dict(exclude_through_models=True)
 
 
 # Read Product Categories - All
-@app.get("/read_product_categories")
+@app.get("/product_categories")
 async def read_product_categories_all():
-    return await ProductCategory.objects.all()
+    product_categories = []
+    for category in (
+        await ProductCategory.objects.select_related(["products", "root_categories"])
+        .filter(root_category=None)
+        .all()
+    ):
+        product_categories.append(category.dict(exclude_through_models=True))
+    return product_categories
 
 
 # Read Product Categories - Pagination
-@app.get("/read_product_categories/{page_number}")
+@app.get("/product_categories/page/{page_number}")
 async def read_product_categories(page_number: int):
-    if not (
-        product_categories := await ProductCategory.objects.paginate(
-            page=page_number
-        ).all()
-    ):
+    if not (await ProductCategory.objects.paginate(page=page_number).all()):
         raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
+    product_categories = []
+    for category in await ProductCategory.objects.select_related(
+        ["products", "root_categories"]
+    ).all():
+        product_categories.append(category.dict(exclude_through_models=True))
     return product_categories
 
 
 # Update Product Category
-@app.put("/update_product_category/{category_id}")
+@app.put("/product_categories/{category_id}")
 async def upate_product_category(
     category_id: int,
     data: ProductCategoryUpdate,
@@ -582,7 +635,7 @@ async def upate_product_category(
 
 
 # Delete Product Category
-@app.delete("/delete_product_category/{category_id}", status_code=204)
+@app.delete("/product_categories/{category_id}", status_code=204)
 async def delete_product_category(
     category_id: int, user=Depends(auth_handler.auth_wrapper)
 ):
@@ -598,9 +651,241 @@ async def delete_product_category(
     await product_category.delete()
 
 
-@app.post("/create_product", response_model=Product)
-async def create_product(product: Product):
-    return await product.save()
+# Create Product
+@app.post("/products")
+async def create_product(product: Product, user=Depends(auth_handler.auth_wrapper)):
+    if len(product.product_name) == 0:
+        raise HTTPException(
+            status_code=400, detail="Product Name cannot be an empty string."
+        )
+    if await Product.objects.get_or_none(product_name=product.product_name) is not None:
+        raise HTTPException(
+            status_code=400, detail="Product with this name already exists"
+        )
+    if product.fats < 0:
+        raise HTTPException(status_code=400, detail="Fats value cannot be negative")
+    if product.proteins < 0:
+        raise HTTPException(status_code=400, detail="Proteins value cannot be negative")
+    if product.carbohydrates < 0:
+        raise HTTPException(
+            status_code=400, detail="Carbohydrates value cannot be negative"
+        )
+    if product.calories < 0:
+        raise HTTPException(status_code=400, detail="Calories value cannot be negative")
+    if product.base_amount < 0:
+        raise HTTPException(
+            status_code=400, detail="Base Amount value cannot be negative"
+        )
+    if product.fats + product.proteins + product.carbohydrates > product.base_amount:
+        raise HTTPException(
+            status_code=400,
+            detail="Sum of Fats, Proteins and Carbohydrates cannot be higher than Base Amount",
+        )
+    if user["role"] == "admin":
+        product.verified = "verified"
+    else:
+        product.verified = "not verified"
+    if await Unit.objects.get_or_none(id=product.unit) is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Product: Unit of given ID: {product.unit} not found",
+        )
+    if await Unit.objects.get_or_none(id=product.categories) is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Product: Category of given ID: {product.categories} not found",
+        )
+    if product.allergens is not None:
+        allergens = []
+        for allergen_id in product.allergens:
+            if (allergen := await Allergen.objects.get_or_none(id=allergen_id)) is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Product: Allergen of given ID: {allergen_id} not found",
+                )
+            allergens.append(allergen)
+    product.allergens = []
+    product = await product.save()
+    if allergens:
+        for allergen in allergens:
+            await product.allergens.add(allergen)
+    return product
+
+
+# Read Product
+@app.get("/products/{product_id}")
+async def read_product(product_id: int):
+    if (await Product.objects.get_or_none(id=product_id)) is None:
+        raise HTTPException(
+            status_code=404, detail=f"Product of given ID: {product_id} not found"
+        )
+    products = (
+        await Product.objects.select_related(["allergens", "diarys", "sets"])
+        .filter(id=product_id)
+        .all()
+    )
+    return products[0].dict(exclude_through_models=True)
+
+
+# Read Products - Paginate
+@app.get("/products/page/{page_number}")
+async def read_products(page_number: int):
+    if not (products := await Product.objects.paginate(page=page_number).all()):
+        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
+    products = []
+    for product in (
+        await Product.objects.select_related(["allergens", "diarys", "sets"])
+        .paginate(page_number)
+        .all()
+    ):
+        products.append(product.dict(exclude_through_models=True))
+    return products
+
+
+# Update Products
+@app.put("/products/{product_id}")
+async def update_product(
+    product_id: int, data: ProductUpdate, user=Depends(auth_handler.auth_wrapper)
+):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if (product := await Product.objects.get_or_none(id=product_id)) is None:
+        raise HTTPException(
+            status_code=400, detail=f"Product with given ID: {product_id} not found"
+        )
+    flags = []
+    if data.product_name is not None:
+        if len(data.product_name) == 0:
+            raise HTTPException(
+                status_code=400, detail="Product Name cannot be an empty string"
+            )
+        if (
+            await Product.objects.get_or_none(product_name=data.product_name)
+            is not None
+        ):
+            raise HTTPException(
+                status_code=400, detail="Product with that name already exists"
+            )
+        flags.append("product_name")
+    if data.fats is not None:
+        if data.fats < 0:
+            raise HTTPException(status_code=400, detail="Fats value cannot be negative")
+        flags.append("fats")
+    if data.proteins is not None:
+        if data.proteins < 0:
+            raise HTTPException(
+                status_code=400, detail="Proteins value cannot be negative"
+            )
+        flags.append("proteins")
+    if data.carbohydrates is not None:
+        if data.carbohydrates < 0:
+            raise HTTPException(
+                status_code=400, detail="Carbohydrates value cannot be negative"
+            )
+        flags.append("carbohydrates")
+    if data.calories is not None:
+        if data.calories < 0:
+            raise HTTPException(
+                status_code=400, detail="Calories value cannot be negative"
+            )
+        flags.append("calories")
+    sum = 0
+    for val in ["fats", "proteins", "carbohydrates"]:
+        if val == "fats":
+            if val in flags:
+                sum += data.fats
+            else:
+                sum += product.fats
+        if val == "proteins":
+            if val in flags:
+                sum += data.proteins
+            else:
+                sum += product.proteins
+        if val == "carbohydrates":
+            if val in flags:
+                sum += data.carbohydrates
+            else:
+                sum += product.carbohydrates
+    if data.base_amount is not None:
+        if data.base_amount < 0:
+            raise HTTPException(
+                status_code=400, detail="Base amount value cannot be negative"
+            )
+        flags.append("base_amount")
+        if sum > data.base_amount:
+            raise HTTPException(
+                status_code=400,
+                detail="Sum of Fats, Proteins and Carbohydrates cannot be higher than Base Amount",
+            )
+    else:
+        if sum > product.base_amount:
+            raise HTTPException(
+                status_code=400,
+                detail="Sum of Fats, Proteins and Carbohydrates cannot be higher than Base Amount",
+            )
+    if data.verified is not None:
+        if data.verified not in ["verified", "not verified"]:
+            raise HTTPException(
+                status_code=400, detail="Product can only be verified or not verified"
+            )
+        flags.append("verified")
+    if data.unit is not None:
+        if await Unit.objects.get_or_none(id=data.unit) is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Product: Unit of given ID: {data.unit} not found",
+            )
+        flags.append("unit")
+    if data.categories is not None:
+        if await ProductCategory.objects.get_or_none(id=data.categories) is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Product: Product Category of given ID: {data.categories} not found",
+            )
+        flags.append("categories")
+    if data.allergens is None or len(data.allergens) == 0:
+        if allergens := await product.allergens.select_all().all():
+            for allergen in allergens:
+                await product.allergens.remove(allergen)
+    if data.allergens is not None and len(data.allergens) > 0:
+        if allergens := await product.allergens.select_all().all():
+            for allergen in allergens:
+                await product.allergens.remove(allergen)
+        for allergen_id in data.allergens:
+            if allergen := await Allergen.objects.get_or_none(id=allergen_id):
+                await product.allergens.add(allergen)
+    if "product_name" in flags:
+        await product.update(product_name=data.product_name)
+    if "fats" in flags:
+        await product.update(fats=data.fats)
+    if "proteins" in flags:
+        await product.update(proteins=data.proteins)
+    if "carbohydrates" in flags:
+        await product.update(carbohydrates=data.carbohydrates)
+    if "calories" in flags:
+        await product.update(calories=data.calories)
+    if "base_amount" in flags:
+        await product.update(base_amount=data.base_amount)
+    if "verified" in flags:
+        await product.update(verified=data.verified)
+    if "unit" in flags:
+        await product.update(unit=data.unit)
+    if "categories" in flags:
+        await product.update(categories=data.categories)
+
+    return product
+
+
+# Delete Product
+@app.delete("/products/{product_id}", status_code=204)
+async def delete_product(product_id: int, user=Depends(auth_handler.auth_wrapper)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if (product := await Product.objects.get_or_none(id=product_id)) is None:
+        raise HTTPException(
+            status_code=404, detail=f"Product with given ID: {product_id} not found"
+        )
+    await product.delete()
 
 
 @app.post("/create_entry", response_model=Entry)

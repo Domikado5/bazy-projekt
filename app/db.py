@@ -1,4 +1,4 @@
-from typing import ForwardRef, Optional, Union
+from typing import ForwardRef, Optional, Union, List
 import databases
 import ormar
 import sqlalchemy
@@ -76,6 +76,7 @@ class Comment(ormar.Model):
     )
     root_post: Post = ormar.ForeignKey(Post)
 
+
 class CommentUpdate(BaseModel):
     username: Optional[str] = None
     content: Optional[str] = None
@@ -127,6 +128,7 @@ class ProductCategoryUpdate(BaseModel):
     category_name: Optional[str] = None
     root_category: Union[int, None]
 
+
 class Product(ormar.Model):
     class Meta(BaseMeta):
         tablename = "products"
@@ -156,11 +158,24 @@ class Product(ormar.Model):
     )
     unit: Unit = ormar.ForeignKey(Unit)
     categories: ProductCategory = ormar.ForeignKey(ProductCategory)
-    allegens: Allergen = ormar.ManyToMany(
+    allergens: Allergen = ormar.ManyToMany(
         Allergen,
         through_relation_name="product_id",
         through_reverse_relation_name="allergen_id",
     )
+
+
+class ProductUpdate(BaseModel):
+    product_name: Optional[str] = None
+    fats: Optional[decimal.Decimal] = None
+    proteins: Optional[decimal.Decimal] = None
+    carbohydrates: Optional[decimal.Decimal] = None
+    calories: Optional[decimal.Decimal] = None
+    base_amount: Optional[decimal.Decimal] = None
+    verified: Optional[str] = None
+    unit: Optional[int] = None
+    categories: Optional[int] = None
+    allergens: Optional[List[int]] = None
 
 
 class Entry(ormar.Model):
