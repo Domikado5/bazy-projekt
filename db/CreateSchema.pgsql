@@ -17,6 +17,8 @@ CREATE TABLE Users(
     role server_role DEFAULT 'user' NOT NULL
 );
 
+CREATE INDEX Users__IDX ON Users(id);
+
 -- posts
 DROP SEQUENCE IF EXISTS posts_id_seq;
 
@@ -31,6 +33,8 @@ CREATE TABLE Posts(
     date timestamp NOT NULL DEFAULT current_timestamp,
     author_id integer NOT NULL REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+CREATE INDEX Posts__IDX ON Posts(id);
 
 -- comments
 DROP SEQUENCE IF EXISTS comments_id_seq;
@@ -47,6 +51,8 @@ CREATE TABLE Comments(
     post_id integer NOT NULL REFERENCES posts (id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE INDEX Comments__IDX ON Comments(id);
+
 -- units
 DROP SEQUENCE IF EXISTS units_id_seq;
 
@@ -58,6 +64,8 @@ CREATE TABLE Units(
     id INTEGER PRIMARY KEY DEFAULT nextval('units_id_seq'),
     unitname varchar(32) NOT NULL UNIQUE
 );
+
+CREATE INDEX Units__IDX ON Units(id);
 
 -- products
 DROP TYPE IF EXISTS product_verified;
@@ -83,6 +91,8 @@ CREATE TABLE Products(
     CONSTRAINT valid_amount CHECK (fats + proteins + carbohydrates <= baseAmount)
 );
 
+CREATE INDEX Products__IDX ON Products(id);
+
 -- productCategories
 DROP SEQUENCE IF EXISTS product_categories_id_seq;
 
@@ -96,6 +106,8 @@ CREATE TABLE Product_Categories(
     rootCategory integer REFERENCES Product_Categories (id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE INDEX ProductCategories__IDX ON ProductCategories(id);
+
 -- allergenes
 DROP SEQUENCE IF EXISTS allergenes_id_seq;
 
@@ -107,6 +119,8 @@ CREATE TABLE Allergenes(
     id INTEGER PRIMARY KEY DEFAULT nextval('allergenes_id_seq'),
     allergenName varchar(128) NOT NULL
 );
+
+CREATE INDEX Allergenes__IDX ON Allergenes(id);
 
 -- product allergenes
 DROP TABLE IF EXISTS products_allergenes;
@@ -131,6 +145,8 @@ CREATE TABLE Diaries(
     totalproteins numeric(10, 3) NOT NULL CHECK (totalproteins > 0),
     totalcarbohydrates numeric(10, 3) NOT NULL CHECK (totalcarbohydrates > 0)
 );
+
+CREATE INDEX Diaries__IDX ON Diaries(id);
 
 -- entries
 DROP SEQUENCE IF EXISTS entries_id_seq;
@@ -159,6 +175,8 @@ CREATE TABLE Sets(
     ownerId INTEGER NOT NULL REFERENCES Users (id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE INDEX Sets__IDX ON Sets(id);
+
 -- set has products
 DROP TABLE IF EXISTS Sets_Products;
 
@@ -178,6 +196,8 @@ CREATE TABLE set_categories(
     id INTEGER PRIMARY KEY DEFAULT nextval('set_categories_id_seq'),
     categoryName varchar(128) NOT NULL
 );
+
+CREATE INDEX SetCategories__IDX ON SetCategories(id);
 
 -- setcategories sets
 DROP TABLE IF EXISTS Sets_set_categories;
