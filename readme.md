@@ -11,7 +11,7 @@ Main:
 - [x] Make ERD diagram.
 - [x] Configure docker for postgres and Python/FastAPI.
 - [x] Create db in Postgres.
-- [ ] Make CRUD in FastAPI (7/11)
+- [x] Make CRUD in FastAPI (11/11)
     - [x] CRUD for User model
     - [x] CRUD for Post model
     - [x] CRUD for Comment model
@@ -19,14 +19,16 @@ Main:
     - [x] CRUD for Allergen model
     - [x] CRUD for Product model
     - [x] CRUD for ProductCategory model
-    - [ ] CRUD for Entry model
-    - [ ] CRUD for Diary model
-    - [ ] CRUD for SetCategory model
-    - [ ] CRUD for Set model
-- [ ] Create queries.
-- [ ] Pin queries to backend.
-- [ ] Pin SQL procedures and functions to backend
-- [ ] Create UI in Vue.js.
+    - [x] CRUD for Entry model
+    - [x] CRUD for Diary model
+    - [x] CRUD for SetCategory model
+    - [x] CRUD for Set model
+- [x] Create package with function and procedure in SQL
+  - [x] Create update diary procedure
+  - [x] Create calculate proportions function
+- [x] Pin SQL procedures and functions to backend
+- [x] Create Indexes for tables in SQL
+- [ ] Create UI in Vue.js.S
 
 Optional:
 - [x] Make REST API.
