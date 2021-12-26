@@ -1,10 +1,7 @@
 # app/main.py
 
-from datetime import datetime
-from os import stat
-from asyncpg.connection import connect
+import decimal
 from fastapi import FastAPI, HTTPException, Depends
-from starlette.requests import empty_receive
 from app.db import (
     database,
     AuthCredentials,
@@ -23,9 +20,13 @@ from app.db import (
     Product,
     ProductUpdate,
     Entry,
+    EntryUpdate,
     Diary,
+    DiaryUpdate,
     SetCategory,
+    SetCategoryUpdate,
     Set,
+    SetUpdate,
 )
 
 from app.auth import AuthHandler
@@ -126,7 +127,7 @@ async def read_users(page_number: int, user=Depends(auth_handler.auth_wrapper)):
         raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     users = []
     for user_data in (
-        await User.objects.select_related(["diarys", "posts", "sets"])
+        await User.objects.select_related(["diaries", "posts", "sets"])
         .paginate(page_number)
         .all()
     ):
@@ -712,6 +713,24 @@ async def create_product(product: Product, user=Depends(auth_handler.auth_wrappe
     return product
 
 
+# Get Product Proportions
+@app.get("/products/{product_id}/proportions/{amount}")
+async def get_proportions(product_id: int, amount: decimal.Decimal):
+    if (await Product.objects.get_or_none(id=product_id)) is None:
+        raise HTTPException(
+            status_code=404, detail=f"Product of given ID: {product_id} not found"
+        )
+    conn = await asyncpg.connect("postgresql://fitapka:fitapka@db:5432/fitapka")
+    tran = conn.transaction()
+    await tran.start()
+    stmt = await conn.prepare('''SELECT * FROM getProportions($1::integer, $2::numeric)''')
+    product_values = await stmt.fetch(product_id, float(amount))
+    await tran.commit()
+    await conn.close()
+
+    return product_values[0]
+
+
 # Read Product
 @app.get("/products/{product_id}")
 async def read_product(product_id: int):
@@ -720,11 +739,10 @@ async def read_product(product_id: int):
             status_code=404, detail=f"Product of given ID: {product_id} not found"
         )
     products = (
-        await Product.objects.select_related(["allergens", "diarys", "sets"])
-        .filter(id=product_id)
-        .all()
+        await Product.objects.select_related(["allergens", "sets"])
+        .get_or_none(id=product_id)
     )
-    return products[0].dict(exclude_through_models=True)
+    return products.dict(exclude_through_models=True)
 
 
 # Read Products - Paginate
@@ -734,7 +752,7 @@ async def read_products(page_number: int):
         raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     products = []
     for product in (
-        await Product.objects.select_related(["allergens", "diarys", "sets"])
+        await Product.objects.select_related(["allergens", "sets"])
         .paginate(page_number)
         .all()
     ):
@@ -888,24 +906,277 @@ async def delete_product(product_id: int, user=Depends(auth_handler.auth_wrapper
     await product.delete()
 
 
-@app.post("/create_entry", response_model=Entry)
-async def create_entry(entry: Entry):
-    return await entry.save()
-
-
-@app.post("/create_diary", response_model=Diary)
-async def create_diary(diary: Diary):
+# Create Diary
+@app.post("/diaries", response_model=Diary)
+async def create_diary(diary: Diary, user=Depends(auth_handler.auth_wrapper)):
+    if await Diary.objects.get_or_none(date=diary.date):
+        raise HTTPException(status_code=400, detail="You cannot create second diary on the same date")
+    if diary.total_calories < 0:
+        raise HTTPException(status_code=400, detail="Total Calories cannot be negative number")
+    if diary.total_fats < 0:
+        raise HTTPException(status_code=400, detail="Total Fats cannot be negative number")
+    if diary.total_carbohydrates < 0:
+        raise HTTPException(status_code=400, detail="Total Carbohydrates cannot be negative number")
+    if diary.total_proteins < 0:
+        raise HTTPException(status_code=400, detail="Total Proteins cannot be negative number")
+    diary.owner = await User.objects.get(id=user["id"])
     return await diary.save()
 
 
-@app.post("/create_set_category", response_model=SetCategory)
-async def create_set_category(set_category: SetCategory):
+# Read Diary
+@app.get("/diaries/{diary_id}")
+async def read_diary(diary_id: int, user=Depends(auth_handler.auth_wrapper)):
+    if (await Diary.objects.get_or_none(id=diary_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Diary of given ID: {diary_id} not found")
+    diary = await Diary.objects.select_related(["owner"]).filter(id=diary_id).all()
+    if diary[0].owner.id != user["id"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    return diary[0].dict(exclude_through_models=True)
+
+
+# Read Diaries - Paginate
+@app.get("/diaries/page/{page_number}")
+async def read_diary(page_number: int, user=Depends(auth_handler.auth_wrapper)):
+    if not (await Diary.objects.paginate(page=page_number).filter(owner__id=user["id"]).all()):
+        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
+    diaries = []
+    for diary in await Diary.objects.select_related([Diary.owner]).paginate(page_number).filter(owner__id=user["id"]).all():
+        diaries.append(diary.dict(exclude_through_models=True))
+    return diaries
+
+
+# Update Diary
+@app.put("/diaries/{diary_id}")
+async def update_diary(diary_id: int, data: DiaryUpdate, user=Depends(auth_handler.auth_wrapper)):
+    if (diary := await Diary.objects.get_or_none(id=diary_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Diary of given ID: {diary_id} not found")
+    if await Diary.objects.get_or_none(date=data.date):
+        raise HTTPException(status_code=404, detail=f"Diary of given Date: {data.date} already exists")
+    if data.date is not None:
+        await diary.update(date=data.date)
+    return diary
+
+
+# Delete Diary
+@app.delete("/diaries/{diary_id}", status_code=204)
+async def delete_diary(diary_id: int, user=Depends(auth_handler.auth_wrapper)):
+    if (diary := await Diary.objects.get_or_none(id=diary_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Diary of given ID: {diary_id} not found")
+    if diary.owner.id != user["id"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    await diary.delete()
+
+
+# Create Entry
+@app.post("/entries", response_model=Entry)
+async def create_entry(entry: Entry, user=Depends(auth_handler.auth_wrapper)):
+    if await Entry.objects.get_or_none(product_id=entry.product_id, diary_id=entry.diary_id):
+        raise HTTPException(status_code=400, detail=f"This entry already exists")
+    if (diary := await Diary.objects.get_or_none(id=entry.diary_id.id)) is None:
+        raise HTTPException(status_code=404, detail=f"Diary of given ID: {entry.diary_id.id} does not exist")
+    if (product := await Product.objects.get_or_none(id=entry.product_id.id)) is None:
+        raise HTTPException(status_code=404, detail=f"Product of given ID: {entry.product_id.id} does not exist")
+    if diary.owner.id != user["id"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if entry.amount < 0:
+        raise HTTPException(status_code=400, detail="Entry amount cannot be negative number")
+    entry.product_id = product
+    entry.diary_id = diary
+    
+    conn = await asyncpg.connect("postgresql://fitapka:fitapka@db:5432/fitapka")
+    await conn.execute(f"CALL updateDiary({int(entry.diary_id.id)}, {int(entry.product_id.id)}, {0})")
+    await conn.close()
+
+    return await entry.save()
+
+
+# Read Entry
+@app.get("/entries/{entry_id}")
+async def read_entry(entry_id: int, user=Depends(auth_handler.auth_wrapper)):
+    if (entry := await Entry.objects.get_or_none(id=entry_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Entry of given ID: {entry_id} not found")
+    diary = await Diary.objects.get(id=entry.diary_id.id)
+    if diary.owner.id != user["id"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    return entry
+
+
+# Read All Entries for certain Diary
+@app.get("/entries/diary/{diary_id}")
+async def read_entries(diary_id: int, user=Depends(auth_handler.auth_wrapper)):
+    if not (entries := await Entry.objects.filter(diary_id=diary_id).all()):
+        raise HTTPException(status_code=404, detail=f"There are noe entries for diary of given ID: {diary_id}")
+    diary = await Diary.objects.get(id=diary_id)
+    if diary.owner.id != user["id"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    return entries
+
+
+# Update Entry
+@app.put("/entries/{entry_id}")
+async def update_entry(entry_id: int, data:EntryUpdate, user=Depends(auth_handler.auth_wrapper)):
+    if not (entry := await Entry.objects.get_or_none(id=entry_id)):
+        raise HTTPException(status_code=404, detail=f"Entry of given ID: {entry_id} not found")
+    diary = await Diary.objects.get(id=entry.diary_id.id)
+    if diary.owner.id != user["id"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if data.amount is not None and data.amount > 0:
+        amount = entry.amount
+        await entry.update(amount=data.amount)
+
+        # Update Diary
+        conn = await asyncpg.connect("postgresql://fitapka:fitapka@db:5432/fitapka")
+        await conn.execute(f"CALL updateDiary({int(entry.diary_id.id)}, {int(entry.product_id.id)}, {amount})")
+        await conn.close()
+    return entry
+
+
+# Delete Entry
+@app.delete("/entries/{entry_id}", status_code=204)
+async def delete_entry(entry_id: int, user=Depends(auth_handler.auth_wrapper)):
+    if not (entry := await Entry.objects.get_or_none(id=entry_id)):
+        raise HTTPException(status_code=404, detail=f"Entry of given ID: {entry_id} not found")
+    diary = await Diary.objects.get(id=entry.diary_id.id)
+    if diary.owner.id != user["id"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    conn = await asyncpg.connect("postgresql://fitapka:fitapka@db:5432/fitapka")
+    await conn.execute(f"CALL updateDiary({int(entry.diary_id.id)}, {int(entry.product_id.id)}, {2 * entry.amount})")
+    await conn.close()
+
+    await entry.delete()
+
+
+# Create Set Category
+@app.post("/set_categories", response_model=SetCategory)
+async def create_set_category(set_category: SetCategory, user=Depends(auth_handler.auth_wrapper)):
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if set_category.category_name is None or len(set_category.category_name) == 0:
+        raise HTTPException(status_code=400, detail='Category Name cannot be empty')
+    if await SetCategory.objects.get_or_none(category_name=set_category.category_name):
+        raise HTTPException(status_code=400, detail=f"Category {set_category.category_name} already exists")
     return await set_category.save()
 
 
-@app.post("/create_set", response_model=Set)
-async def create_set(set: Set):
+# Read Set Category
+@app.get("/set_categories/{category_id}")
+async def read_set_category(category_id: int):
+    if (set_category := await SetCategory.objects.select_related(['sets']).get_or_none(id=category_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Set Category of given ID: f{category_id} not found")
+    return set_category.dict(exclude_through_models=True)
+
+
+# Read Set Categories - All
+@app.get("/set_categories")
+async def read_set_categories():
+    set_categories = await SetCategory.objects.select_related(['sets']).all()
+    return [set_category.dict(exclude_through_models=True) for set_category in set_categories]
+
+
+# Update Set Category
+@app.put("/set_categories/{category_id}")
+async def update_set_category(category_id: int, data:SetCategoryUpdate, user=Depends(auth_handler.auth_wrapper)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if (set_category := await SetCategory.objects.select_related(['sets']).get_or_none(id=category_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Set Category of given ID: f{category_id} not found")
+    if data.category_name:
+        if await SetCategory.objects.get_or_none(category_name=data.category_name):
+            raise HTTPException(status_code=400, detail=f"Category {data.category_name} already exists")
+        await set_category.update(category_name= data.category_name)
+    return set_category
+
+
+# Delete Set Category
+@app.delete("/set_categories/{category_id}", status_code=204)
+async def delete_set_category(category_id: int, user=Depends(auth_handler.auth_wrapper)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if (set_category := await SetCategory.objects.select_related(['sets']).get_or_none(id=category_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Set Category of given ID: f{category_id} not found")
+    
+    await set_category.delete()
+
+
+# Create Set
+@app.post("/sets", response_model=Set)
+async def create_set(set: Set, user=Depends(auth_handler.auth_wrapper)):
+    if not set.set_name:
+        raise HTTPException(status_code=400, detail="Set name cannot be an empty string")
+    if await Set.objects.get_or_none(owner=user["id"], set_name=set.set_name):
+        raise HTTPException(status_code=400, detail=f"Set {set.set_name} already exists")
+    set.owner = await User.objects.get(id=user["id"])
     return await set.save()
+
+
+# Read Set
+@app.get("/sets/{set_id}")
+async def read_set(set_id: int, user=Depends(auth_handler.auth_wrapper)):
+    if (set := await Set.objects.select_related(['owner', 'products', 'categories']).get_or_none(id=set_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Set of given ID: {set_id} not found")
+    if user["id"] != set.owner.id:
+        raise HTTPException(status_code=402, detail="Unauthorized")
+    return set.dict(exclude_through_models=True)
+
+
+# Read Sets - Paginate
+@app.get("/sets/page/{page_number}")
+async def read_sets(page_number: int, user=Depends(auth_handler.auth_wrapper)):
+    if not (sets := await Set.objects.select_related(['owner', 'products', 'categories']).paginate(page_number).filter(owner__id=user["id"]).all()):
+        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
+    return [set.dict(exclude_through_models=True) for set in sets]
+
+
+# Update Set
+@app.put("/sets/{set_id}")
+async def update_set(set_id: int, data: SetUpdate, user=Depends(auth_handler.auth_wrapper)):
+    if (set := await Set.objects.select_related(['owner', 'products', 'categories']).get_or_none(id=set_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Set of given ID: {set_id} not found")
+    if user["id"] != set.owner.id:
+        raise HTTPException(status_code=402, detail="Unauthorized")
+    if data.set_name and set.set_name != data.set_name:
+        if await Set.objects.get_or_none(owner=user["id"], set_name=data.set_name):
+            raise HTTPException(status_code=400, detail=f"Set {data.set_name} already exists")
+        await set.update(set_name=data.set_name)
+    await set.update(description= data.description)
+
+    if data.products is None or len(data.products) == 0:
+        temp = await Set.objects.select_related(["products"]).get_or_none(id=set_id)
+        if products := temp.products:
+            for product in products:
+                await set.products.remove(product)
+    if data.products is not None and len(data.products) > 0:
+        temp = await Set.objects.select_related(["products"]).get_or_none(id=set_id)
+        if products := temp.products:
+            for product in products:
+                await set.products.remove(product)
+        for product_id in data.products:
+            if product := await Product.objects.get_or_none(id=product_id):
+                await set.products.add(product)
+    
+    if data.categories is None or len(data.categories) == 0:
+        if categories := await set.categories.select_all().all():
+            for category in categories:
+                await set.categories.remove(category)
+    if data.categories is not None and len(data.categories) > 0:
+        if categories := await set.categories.select_all().all():
+            for category in categories:
+                await set.categories.remove(category)
+        for category_id in data.categories:
+            if category := await SetCategory.objects.get_or_none(id=category_id):
+                await set.categories.add(category)
+    return set
+
+
+# Delete Set
+@app.delete("/sets/{set_id}", status_code=204)
+async def delete_set(set_id: int, user=Depends(auth_handler.auth_wrapper)):
+    if (set := await Set.objects.get_or_none(id=set_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Set of given ID: {set_id} not found")
+    if set.owner.id != user["id"]:
+        raise HTTPException(status_code=402, detail="Unauthorized")
+    await set.delete()
 
 
 @app.on_event("startup")
@@ -916,9 +1187,11 @@ async def startup():
     with open("db/AlterTable.pgsql", "r") as f:
         data = f.read()
         await conn.execute(data)
+    with open("db/Package.pgsql", "r") as f:
+        data = f.read()
+        await conn.execute(data)
     await tran.commit()
     await conn.close()
-
     if not database.is_connected:
         await database.connect()
 

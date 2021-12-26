@@ -100,7 +100,7 @@ class Allergen(ormar.Model):
         tablename = "allergens"
 
     id: int = ormar.Integer(primary_key=True)
-    allergen: str = ormar.String(max_length=128, nullable=False)
+    allergen: str = ormar.String(max_length=128, nullable=False, related_name="allergens")
 
 
 class AllergenUpdate(BaseModel):
@@ -157,11 +157,12 @@ class Product(ormar.Model):
         default="not verified",
     )
     unit: Unit = ormar.ForeignKey(Unit)
-    categories: ProductCategory = ormar.ForeignKey(ProductCategory)
+    categories: ProductCategory = ormar.ForeignKey(ProductCategory, related_name="products")
     allergens: Allergen = ormar.ManyToMany(
         Allergen,
         through_relation_name="product_id",
         through_reverse_relation_name="allergen_id",
+        related_name="products"
     )
 
 
@@ -188,6 +189,10 @@ class Entry(ormar.Model):
     )
 
 
+class EntryUpdate(BaseModel):
+    amount: Optional[decimal.Decimal] = None
+
+
 class Diary(ormar.Model):
     class Meta(BaseMeta):
         tablename = "diaries"
@@ -211,8 +216,13 @@ class Diary(ormar.Model):
         through=Entry,
         through_relation_name="diary_id",
         through_reverse_relation_name="product_id",
+        related_name="diaries"
     )
-    owner: User = ormar.ForeignKey(User)
+    owner: User = ormar.ForeignKey(User, related_name="diaries")
+
+
+class DiaryUpdate(BaseModel):
+    date: Optional[datetime.date] = None
 
 
 class SetCategory(ormar.Model):
@@ -221,6 +231,10 @@ class SetCategory(ormar.Model):
 
     id: int = ormar.Integer(primary_key=True)
     category_name: str = ormar.String(max_length=128, nullable=False)
+
+
+class SetCategoryUpdate(BaseModel):
+    category_name: Optional[str] = None
 
 
 class Set(ormar.Model):
@@ -235,12 +249,21 @@ class Set(ormar.Model):
         Product,
         through_relation_name="set_id",
         through_reverse_relation_name="product_id",
+        related_name="sets"
     )
     categories: SetCategory = ormar.ManyToMany(
         SetCategory,
         through_relation_name="set_id",
         through_reverse_relation_name="category_id",
+        related_name="sets"
     )
+
+
+class SetUpdate(BaseModel):
+    set_name: Optional[str] = None
+    description: Optional[str] = None
+    products: Optional[List[int]] = None
+    categories: Optional[List[int]] = None
 
 
 engine = sqlalchemy.create_engine(settings.db_url)
