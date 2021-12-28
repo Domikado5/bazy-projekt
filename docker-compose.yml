@@ -1,0 +1,42 @@
+version: '3.8'
+services:
+  vue:
+    build:
+      context: ./frontend
+    image: vueapp:0.0.1
+    container_name: "frontend"
+    ports:
+      - 8080:8080
+    volumes:
+      - ./frontend/vue_app:/vue_app
+    depends_on:
+      - db
+      - web
+  web:
+    container_name: backend
+    build:
+      context: ./backend
+    command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; uvicorn app.main:app --host 0.0.0.0 --reload'
+    volumes:
+      - ./backend:/app
+    ports:
+      - 8000:8000
+    environment:
+      - DATABASE_URL=postgresql://fitapka:fitapka@db:5432/fitapka
+      - JWT_SECRET=.j@(<OVSJAo;PIi&Yu~q];|A|GD|_BlQIJ4~/%w+%lGPt6eltAn`VJZP&({7U
+    depends_on:
+      - db
+  db:
+    container_name: database
+    image: postgres:13-alpine
+    volumes:
+      - postgres_database:/var/lib/postgresql/data/
+    expose:
+      - 5432
+    environment:
+      - POSTGRES_USER=fitapka
+      - POSTGRES_PASSWORD=fitapka
+      - POSTGRES_DB=fitapka
+
+volumes:
+  postgres_database:
