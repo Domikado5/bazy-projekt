@@ -28,8 +28,8 @@ Main:
   - [x] Create calculate proportions function
 - [x] Pin SQL procedures and functions to backend
 - [x] Create Indexes for tables in SQL
-- [ ] Create UI in Vue.js.S
-  - [ ] Create Login Page
+- [ ] Create UI in Vue.js
+  - [x] Create Login Page
   - [ ] Configure VUEX for storing authentication Token
   - [ ] Create UI for CRUD
 
