@@ -1,7 +1,7 @@
 # app/main.py
 
 import decimal
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Response
 from app.db import (
     database,
     AuthCredentials,
@@ -32,8 +32,28 @@ from app.db import (
 from app.auth import AuthHandler
 import asyncpg
 import re
+from fastapi.middleware.cors import CORSMiddleware
+import json
+
 
 app = FastAPI(title="Fitapka")
+
+
+origins = [
+    "http://localhost.tiangolo.com",
+    "https://localhost.tiangolo.com",
+    "http://localhost",
+    "http://localhost:8080",
+]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 auth_handler = AuthHandler()
@@ -66,7 +86,7 @@ async def login(auth_cred: AuthCredentials):
     ):
         raise HTTPException(status_code=401, detail="Invalid username and/or password")
     token = auth_handler.encode_token(user)
-    return {"token": token}
+    return Response(content=json.dumps({"token": token}), media_type="application/json")
 
 
 # Create User
