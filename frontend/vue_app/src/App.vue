@@ -1,26 +1,18 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png" />
-    <button 
-    class="btn btn-primary" 
-    data-bs-target="#collapseTarget" 
-    data-bs-toggle="collapse">
-    Bootstrap collapse
-  </button>
-  <div class="collapse py-2" id="collapseTarget">
-    This is the toggle-able content!
-  </div>
-
-  <HelloWorld msg="Welcome to Your Vue.js App" />
+	<div>
+		<Navbar />
+		<router-view />
+	</div>
 </template>
 
 <script>
-import HelloWorld from "./components/HelloWorld.vue";
+import Navbar from "./components/Navbar.vue";
 
 export default {
-  name: "App",
-  components: {
-    HelloWorld,
-  },
+	name: "App",
+	components: {
+		Navbar,
+	},
 };
 </script>
 
@@ -31,6 +23,20 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
 }
+
+#nav {
+  padding: 30px;
+
+  a {
+    font-weight: bold;
+    color: #2c3e50;
+
+    &.router-link-exact-active {
+      color: #42b983;
+    }
+  }
+}
+
+@import './assets/colors.css';
 </style>
