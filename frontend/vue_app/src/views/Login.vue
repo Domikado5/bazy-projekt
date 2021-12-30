@@ -16,7 +16,6 @@
             <button type="submit" class="btn btn-primary">Login</button>
         </form>
         <a href="#" class="link p-2">Create account</a>
-        <p>Your token: {{ token }}</p>
     </div>
 </template>
 
@@ -27,7 +26,6 @@ export default {
         return {
             login: "kimziol",
             password: "Strong123",
-            token: "",
             message: "",
         }
     },
@@ -50,16 +48,17 @@ export default {
                     redirect: 'follow', 
                     referrerPolicy: 'no-referrer', 
                     body: JSON.stringify(fetchBody)
-                }
-            ).then(response => {
+                })
+            .then(response => {
                 if (response.status!==200){
                     this.message = response.statusText
                     throw new Error(response.statusText)
                 }
                 return response.json()
-            }
-            ).then(data => this.token = data.token
-            ).catch(err => console.error(err))
+            })
+            .then(data => this.$store.commit('updateToken', data))
+            .then(() => this.$router.push({path: "/"}))
+            .catch(err => console.error(err))
         },
     }
 }

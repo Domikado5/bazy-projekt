@@ -32,7 +32,7 @@
               Products
             </a>
             <ul
-              class="dropdown-menu dropdown-menu-dark"
+              class="dropdown-menu dropdown-menu-dark dropdown-menu-start"
               aria-labelledby="navbarDropdown"
             >
               <li><a href="#" class="dropdown-item">List Products</a></li>
@@ -41,7 +41,21 @@
             </ul>
           </li>
         </ul>
-        <router-link class="btn btn-outline-dark" active-class="active" to="/login">Login</router-link>
+        <li class="dropdown" v-if="$store.getters.getToken != null">
+            <button class="btn btn-outline-dark dropdown-toggle" type="button" data-bs-display="static" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+              User
+            </button>
+            <ul
+              class="dropdown-menu dropdown-menu-dark dropdown-menu-lg-end "
+              aria-labelledby="userDropdown"
+            >
+              <li><a href="#" class="dropdown-item">Your Profile</a></li>
+              <li><a href="#" class="dropdown-item">Your Diaries</a></li>
+              <li><hr class="dropdown-divider" /></li>
+              <li><a href="#" @click="logout" class="dropdown-item">Logout</a></li>
+            </ul>
+        </li>
+        <router-link v-else class="btn btn-outline-dark" active-class="active" to="/login">Login</router-link>
       </div>
     </div>
   </nav>
@@ -49,7 +63,11 @@
 
 <script>
 export default {
-  setup() {},
+  methods: {
+    logout(){
+      this.$store.commit('resetToken').then(() => this.$router.push({path: "/"}))
+    }
+  }
 };
 </script>
 
