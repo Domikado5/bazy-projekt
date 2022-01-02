@@ -34,6 +34,8 @@ import asyncpg
 import re
 from fastapi.middleware.cors import CORSMiddleware
 import json
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 
 
 app = FastAPI(title="Fitapka")
@@ -249,7 +251,7 @@ async def read_post(post_id: int):
         raise HTTPException(
             status_code=404, detail=f"Post of given ID: {post_id} don't exist"
         )
-    post = await Post.objects.select_related(["comments"]).filter(id=post_id).all()
+    post = await Post.objects.select_related(["comments", "author"]).filter(id=post_id).all()
     return post[0].dict(exclude_through_models=True)
 
 
@@ -260,9 +262,10 @@ async def read_posts(page_number: int):
         raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     posts = []
     for post in (
-        await Post.objects.select_related(["comments"]).paginate(page_number).all()
+        await Post.objects.select_related(["comments", "author"]).paginate(page_number).all()
     ):
         posts.append(post.dict(exclude_through_models=True))
+    
     return posts
 
 

@@ -1,7 +1,7 @@
 <template>
   <nav class="navbar navbar-expand-lg navbar-dark light-blue darken-4">
     <div class="container-fluid">
-      <a href="#" class="navbar-brand">Fitapka</a>
+      <router-link to="/" class="navbar-brand">Fitapka</router-link>
       <button
         class="navbar-toggler"
         data-bs-toggle="collapse"
@@ -65,7 +65,8 @@
 export default {
   methods: {
     logout(){
-      this.$store.commit('resetToken').then(() => this.$router.push({path: "/"}))
+      this.$store.commit('resetToken')
+      this.$router.push({path: "/"})
     }
   }
 };

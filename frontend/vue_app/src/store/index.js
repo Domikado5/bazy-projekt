@@ -3,10 +3,14 @@ import { createStore } from "vuex";
 export default createStore({
   state: {
     token: null,
+    url: 'http://localhost:8000'
   },
   getters: {
     getToken(state){
       return state.token
+    },
+    getUrl(state){
+      return state.url
     }
   },
   mutations: {
