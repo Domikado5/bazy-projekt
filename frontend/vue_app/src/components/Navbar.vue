@@ -43,13 +43,13 @@
         </ul>
         <li class="dropdown" v-if="$store.getters.getToken != null">
             <button class="btn btn-outline-dark dropdown-toggle" type="button" data-bs-display="static" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-              User
+              {{ $store.getters.getUser.username }}
             </button>
             <ul
               class="dropdown-menu dropdown-menu-dark dropdown-menu-lg-end "
               aria-labelledby="userDropdown"
             >
-              <li><a href="#" class="dropdown-item">Your Profile</a></li>
+              <li><router-link :to="'/account/' + $store.getters.getUser.id" class="dropdown-item">Your Profile</router-link></li>
               <li><a href="#" class="dropdown-item">Your Diaries</a></li>
               <li><hr class="dropdown-divider" /></li>
               <li><a href="#" @click="logout" class="dropdown-item">Logout</a></li>

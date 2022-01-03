@@ -19,8 +19,10 @@ export default {
             .then(response => {
               console.log('Got response with satus code ' + response.status + ' : ' + response.statusText)
               console.log(response)
-              if (response.status!==200){
-                return {error: response.statusText, code: response.status}
+              if (response.status!==200 && response.status!==204){
+                return response.json()
+              }else if (response.status == 204){
+                return {'code': response.status, 'text': response.statusText}
               }
               return response.json()
             })

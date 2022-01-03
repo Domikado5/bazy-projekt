@@ -88,7 +88,7 @@ async def login(auth_cred: AuthCredentials):
     ):
         raise HTTPException(status_code=401, detail="Invalid username and/or password")
     token = auth_handler.encode_token(user)
-    return Response(content=json.dumps({"token": token}), media_type="application/json")
+    return Response(content=json.dumps({"token": token, "user": jsonable_encoder(user)}), media_type="application/json")
 
 
 # Create User
@@ -133,7 +133,7 @@ async def read_user(user_id: int, user=Depends(auth_handler.auth_wrapper)):
             status_code=404, detail=f"User of given ID: {user_id} not found"
         )
     user_data = (
-        await User.objects.select_related(["diarys", "posts", "sets"])
+        await User.objects.select_related(["diaries", "posts", "sets"])
         .filter(id=user_id)
         .all()
     )
@@ -219,7 +219,7 @@ async def update_user(
 
 
 # Delete User
-@app.delete("/delete_user/{user_id}", status_code=204)
+@app.delete("/users/{user_id}", status_code=204)
 async def delete_user(user_id: int, user=Depends(auth_handler.auth_wrapper)):
     if user["role"] != "admin" and user["id"] != user_id:
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -283,7 +283,7 @@ async def update_post(
     if post.author.id != user["id"] and user["role"] != "admin":
         raise HTTPException(status_code=403, detail="You are not the post author")
     if content.title is not None and len(content.title) > 0:
-        if await Post.objects.get_or_none(title=content.title) is not None:
+        if post.title != content.title and await Post.objects.get_or_none(title=content.title) is not None:
             raise HTTPException(
                 status_code=400, detail="Post with this title already exists"
             )
@@ -376,7 +376,8 @@ async def delete_comment(comment_id: int, user=Depends(auth_handler.auth_wrapper
         raise HTTPException(
             status_code=404, detail=f"Comment of given ID: {comment_id} not found"
         )
-    if user["username"] != comment.username and user["role"] != "admin":
+    post = await Post.objects.get_or_none(id=comment.root_post)
+    if (user["username"] != comment.username and user["role"] != "admin") and int(post.author.id) != int(user["id"]):
         raise HTTPException(status_code=403, detail="Unauthorized")
     await comment.delete()
 

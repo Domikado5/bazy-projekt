@@ -15,7 +15,7 @@
             </div>
             <button type="submit" class="btn btn-primary">Login</button>
         </form>
-        <a href="#" class="link p-2">Create account</a>
+        <router-link to="/register" class="link p-2">Create account</router-link>
     </div>
 </template>
 
@@ -24,8 +24,8 @@ export default {
     name: "Login",
     data(){
         return {
-            login: "kimziol",
-            password: "Strong123",
+            login: "Joseph",
+            password: "Password123",
             message: "",
         }
     },
