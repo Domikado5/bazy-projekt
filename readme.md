@@ -56,7 +56,15 @@ Optional:
 
 ---
 # To run the app
-    docker-compose build --no-cache
-    docker-compose up -d --build
-    docker-compose down -v
-    docker-compose exec db psql --username=fitapka --dbname=fitapka
+- Build and start app
+    
+  ```docker-compose up --build```
+- Run postgresql shell
+  
+  ```docker-compose exec db psql --username=fitapka --dbname=fitapka```
+- Stop app
+
+  ```docker-compose stop```
+- Remove app and volumes
+
+  ```docker-compose down -v```
