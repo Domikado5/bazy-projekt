@@ -5,14 +5,14 @@
             <div class="mb-2">
 
             <router-link v-if="$store.getters.getUser && $store.getters.getUser.id == post.author.id" :to="'/post/edit/' + post.id" class="btn green darken-4 white-text ms-2">Edit Post</router-link>
-            <button v-if="$store.getters.getUser && $store.getters.getUser.id == post.author.id || $store.getters.getUser && $store.getters.getUser.role == 'admin'" class="btn red darken-3 white-text ms-2" @click="deletePost(post.id)">Delete Post</button>
+            <button v-if="($store.getters.getUser && $store.getters.getUser.id == post.author.id) || $store.getters.getUser && $store.getters.getUser.role == 'admin'" class="btn red darken-3 white-text ms-2" @click="deletePost(post.id)">Delete Post</button>
             </div>
             <h5>Wrote by {{ post.author.username }}</h5>
             <h6>{{ new Date(post.date).toDateString() }}</h6>
             <p>{{ post.content }}</p>
             <h4>Comments:</h4>
             <p v-if="message && message.detail" class="red-text red lighten-4 p-4">{{ message.detail }}</p>
-            <form @submit.prevent="sendComment()" class="row">
+            <form @submit.prevent="sendComment()" class="row" v-show="$store.getters.getUser">
                 <div class="input-group mb-3">
                     <input type="text" id="inputComment" class="form-control" v-model="comment">
                     <button class="btn blue accent-1">Send comment</button>
@@ -27,10 +27,10 @@
                         </div>
                     </form>
                     <span class="" v-show="! commentsEdit.filter(element => {return element.id == comment.id})[0].edit">{{ getCommentContent(comment.id) }}</span>
-                    <span class="blue-text">~ {{ comment.username + ' ' }}</span>
-                    <span class="red-text">{{ new Date(comment.date).toDateString() }}</span>
-                    <button @click="toggleEdit(comment.id)" v-if="comment.username == this.$store.getters.getUser.username" class="btn grey lighten-2 grey-text text-darken-2 py-1 px-2 ms-2"><i class="bi bi-pencil-square"></i></button>
-                    <button @click="deleteComment(comment.id)" v-if="post.author.id == this.$store.getters.getUser.id || this.$store.getters.getUser.role == 'admin' || comment.username == this.$store.getters.getUser.username" class="btn red lighten-2 red-text text-darken-2 py-1 px-2 ms-2"><i class="bi bi-trash-fill"></i></button>
+                    <span class="blue-text mx-1">~ {{ comment.username + ' ' }}</span>
+                    <span class="red-text mx-1">{{ new Date(comment.date).toDateString() }}</span>
+                    <button @click="toggleEdit(comment.id)" v-if="this.$store.getters.getUser && comment.username == this.$store.getters.getUser.username" class="btn grey lighten-2 grey-text text-darken-2 py-1 px-2 ms-2"><i class="bi bi-pencil-square"></i></button>
+                    <button @click="deleteComment(comment.id)" v-if="this.$store.getters.getUser && (post.author.id == this.$store.getters.getUser.id || this.$store.getters.getUser.role == 'admin' || comment.username == this.$store.getters.getUser.username)" class="btn red lighten-2 red-text text-darken-2 py-1 px-2 ms-2"><i class="bi bi-trash-fill"></i></button>
                 </li>
             </ul>
         </div>

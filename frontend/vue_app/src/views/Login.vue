@@ -24,8 +24,8 @@ export default {
     name: "Login",
     data(){
         return {
-            login: "Joseph",
-            password: "Password123",
+            login: "kimziol",
+            password: "Strong123",
             message: "",
         }
     },

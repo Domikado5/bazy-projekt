@@ -1,7 +1,7 @@
 <template>
     <div>
         <h1>Blog</h1>
-        <router-link :to="'/post/create'" class="btn blue darken-4 white-text text-lighten-4 mb-3 p-2">Create New Post</router-link>
+        <router-link :to="'/post/create'" v-show="$store.getters.getUser && $store.getters.getUser.role == 'writer'" class="btn blue darken-4 white-text text-lighten-4 mb-3 p-2">Create New Post</router-link>
         <div class="container-fluid px-4">
             <div class="row row-cols-1 row-cols-lg-3 row-cols-md-2 gy-4 gx-3">
                 <div v-for="post in posts" :key="post.id" class="col">

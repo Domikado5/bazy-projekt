@@ -21,18 +21,34 @@
             </div>
             <div class="my-1" v-if="$store.getters.getUser.role == 'admin' || $store.getters.getUser.id == user.id">
                 <button @click="deleteUser()" class="btn red accent-2 text-white mx-1">Delete Account</button>
-                <button class="btn orange accent-2 text-white">Update Account</button>
+                <button class="btn orange accent-2 text-white" data-bs-toggle="modal" data-bs-target="#userEditModal">Update Account</button>
+            </div>
+            <div class="modal fade" id="userEditModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="userModalLabel">Edit User Data</h5>
+                            <button type="button" id="userEditModalClose" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <user-form @user-update="refreshUser()" :user-id="user.id" :user-username="user.username" :user-email="user.email"></user-form>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script>
+import UserForm from '@/components/UserForm.vue'
+
 export default {
+  components: { UserForm },
     data(){
         return {
             user: null,
-            message: null
+            message: null,
         }
     },
     methods: {
@@ -50,6 +66,10 @@ export default {
                     this.$router.push({path: "/"})
                 }
             }
+        },
+        refreshUser(){
+            document.querySelector("#userEditModalClose").click()
+            this.getUser()
         }
     },
     created(){

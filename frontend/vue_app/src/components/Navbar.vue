@@ -29,16 +29,19 @@
               data-bs-toggle="dropdown"
               aria-expanded="false"
             >
-              Products
+              <span :class="{'white-text': $route.name == 'Products - List'}">Products</span>
             </a>
             <ul
               class="dropdown-menu dropdown-menu-dark dropdown-menu-start"
               aria-labelledby="navbarDropdown"
             >
-              <li><a href="#" class="dropdown-item">List Products</a></li>
+              <li><router-link to="/products/1" class="dropdown-item">List Products</router-link></li>
               <li><hr class="dropdown-divider" /></li>
               <li><a href="#" class="dropdown-item">Add New Product</a></li>
             </ul>
+          </li>
+          <li class="nav-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">
+            <router-link class="nav-link" active-class="active" to="/users/1">Users</router-link>
           </li>
         </ul>
         <li class="dropdown" v-if="$store.getters.getToken != null">

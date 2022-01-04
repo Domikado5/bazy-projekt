@@ -169,7 +169,7 @@ async def update_user(
     if user_data.id != user["id"] and user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
     flags = []
-    if update_data.username is not None:
+    if update_data.username is not None and update_data.username != user_data.username:
         if await User.objects.get_or_none(username=update_data.username):
             raise HTTPException(status_code=400, detail="Username is taken")
         if len(update_data.username) < 8:
@@ -181,7 +181,7 @@ async def update_user(
                 each=True, username=update_data.username
             )
         flags.append("username")
-    if update_data.password is not None:
+    if update_data.password is not None and update_data.password != user_data.password:
         if (
             len(update_data.password) < 8
             or not any(char.isdigit() for char in update_data.password)
@@ -193,7 +193,7 @@ async def update_user(
                 detail="Your password must be at least 8 characters long, contain at least one number and have a mixture of uppercase and lowercase letters.",
             )
         flags.append("password")
-    if update_data.email is not None:
+    if update_data.email is not None and update_data.email != user_data.email:
         if not re.fullmatch(
             r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", update_data.email
         ):
@@ -206,7 +206,7 @@ async def update_user(
                 detail=f"User with email:{update_data.email} already exist",
             )
         flags.append("email")
-    if update_data.role is not None and user["role"] == "admin":
+    if update_data.role is not None and update_data.role != user_data.role  and user["role"] == "admin":
         if update_data.role in ["user", "writer", "admin"]:
             await user_data.update(role=update_data.role)
     if "username" in flags:
@@ -763,7 +763,7 @@ async def read_product(product_id: int):
             status_code=404, detail=f"Product of given ID: {product_id} not found"
         )
     products = (
-        await Product.objects.select_related(["allergens", "sets"])
+        await Product.objects.select_related(["allergens", "sets", "unit", "categories"])
         .get_or_none(id=product_id)
     )
     return products.dict(exclude_through_models=True)
@@ -776,7 +776,7 @@ async def read_products(page_number: int):
         raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     products = []
     for product in (
-        await Product.objects.select_related(["allergens", "sets"])
+        await Product.objects.select_related(["allergens", "sets", "unit", "categories"])
         .paginate(page_number)
         .all()
     ):
