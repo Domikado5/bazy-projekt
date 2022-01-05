@@ -2,6 +2,7 @@
     <div class="container-fluid">
         <h1>Users List - Page {{ $route.params.page }}</h1>
         <h3 class="red lighten-4 red-text" v-if="message && message.detail">{{ message.detail }}</h3>
+        <div class="table-responsive">
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -58,6 +59,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
     </div>
 </template>
 

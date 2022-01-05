@@ -796,7 +796,7 @@ async def update_product(
             status_code=400, detail=f"Product with given ID: {product_id} not found"
         )
     flags = []
-    if data.product_name is not None:
+    if data.product_name is not None and data.product_name != product.product_name:
         if len(data.product_name) == 0:
             raise HTTPException(
                 status_code=400, detail="Product Name cannot be an empty string"

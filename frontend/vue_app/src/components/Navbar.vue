@@ -29,7 +29,7 @@
               data-bs-toggle="dropdown"
               aria-expanded="false"
             >
-              <span :class="{'white-text': $route.name == 'Products - List'}">Products</span>
+              <span :class="{'white-text': ['Products - List', 'Products - Add'].includes($route.name)}">Products</span>
             </a>
             <ul
               class="dropdown-menu dropdown-menu-dark dropdown-menu-start"
@@ -37,7 +37,7 @@
             >
               <li><router-link to="/products/1" class="dropdown-item">List Products</router-link></li>
               <li><hr class="dropdown-divider" /></li>
-              <li><a href="#" class="dropdown-item">Add New Product</a></li>
+              <li><router-link to="/add_product" class="dropdown-item">Add New Product</router-link></li>
             </ul>
           </li>
           <li class="nav-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">

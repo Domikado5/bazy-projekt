@@ -9,6 +9,8 @@ import Post from "@/views/Posts/Post.vue";
 import PostCreate from "@/views/Posts/PostCreate.vue";
 import PostEdit from "@/views/Posts/PostEdit.vue";
 import ProductsList from "@/views/Products/ProductsList.vue";
+import AddProduct from "@/views/Products/AddProduct.vue"
+import Product from "@/views/Products/Product.vue"
 
 const routes = [
   {
@@ -61,6 +63,16 @@ const routes = [
     name: "Products - List",
     component: ProductsList
   },
+  {
+    path: "/add_product",
+    name: "Products - Add",
+    component: AddProduct
+  },
+  {
+    path: "/product/:id",
+    name: "Product",
+    component: Product
+  }
 ];
 
 const router = createRouter({
