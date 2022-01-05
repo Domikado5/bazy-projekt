@@ -42,7 +42,7 @@ Main:
         - [x] Modify/Update Account
       - [x] List - Admin
     - [x] UI for product
-      - [ ] UI for categories - product
+      - [x] UI for categories - product
       - [ ] UI for allergens
       - [ ] UI for units
     - [ ] UI for diaries
