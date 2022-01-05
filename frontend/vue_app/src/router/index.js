@@ -11,6 +11,7 @@ import PostEdit from "@/views/Posts/PostEdit.vue";
 import ProductsList from "@/views/Products/ProductsList.vue";
 import AddProduct from "@/views/Products/AddProduct.vue"
 import Product from "@/views/Products/Product.vue"
+import ProductCategories from "@/views/Products/Categories.vue"
 
 const routes = [
   {
@@ -72,6 +73,11 @@ const routes = [
     path: "/product/:id",
     name: "Product",
     component: Product
+  },
+  {
+    path: "/product_categories/:page",
+    name: "Products - Categories",
+    component: ProductCategories
   }
 ];
 

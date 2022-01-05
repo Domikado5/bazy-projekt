@@ -602,7 +602,7 @@ async def read_product_categories(page_number: int):
         raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     product_categories = []
     for category in await ProductCategory.objects.select_related(
-        ["products", "root_categories"]
+        ["products", "root_category"]
     ).all():
         product_categories.append(category.dict(exclude_through_models=True))
     return product_categories
@@ -624,7 +624,7 @@ async def upate_product_category(
             status_code=404,
             detail=f"Product Category of given ID: {category_id} not found",
         )
-    if data.category_name is not None:
+    if data.category_name is not None and data.category_name != product_category.category_name:
         if len(data.category_name) == 0:
             raise HTTPException(
                 status_code=400, detail="Product Category Name cannot be empty string"
