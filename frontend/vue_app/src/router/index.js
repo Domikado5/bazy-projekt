@@ -12,6 +12,7 @@ import ProductsList from "@/views/Products/ProductsList.vue";
 import AddProduct from "@/views/Products/AddProduct.vue"
 import Product from "@/views/Products/Product.vue"
 import ProductCategories from "@/views/Products/Categories.vue"
+import Allergens from "@/views/Products/Allergens.vue"
 
 const routes = [
   {
@@ -78,6 +79,11 @@ const routes = [
     path: "/product_categories/:page",
     name: "Products - Categories",
     component: ProductCategories
+  },
+  {
+    path: "/allergens/:page",
+    name: "Products - Allergens",
+    component: Allergens
   }
 ];
 

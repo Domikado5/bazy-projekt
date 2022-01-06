@@ -29,16 +29,17 @@
               data-bs-toggle="dropdown"
               aria-expanded="false"
             >
-              <span :class="{'white-text': ['Products - List', 'Products - Add', 'Products - Categories'].includes($route.name)}">Products</span>
+              <span :class="{'white-text': productsLinks.includes($route.name)}">Products</span>
             </a>
             <ul
               class="dropdown-menu dropdown-menu-dark dropdown-menu-start"
               aria-labelledby="navbarDropdown"
             >
+              <li><router-link to="/add_product" class="dropdown-item">Add New Product</router-link></li>
+              <li><hr class="dropdown-divider" /></li>
               <li><router-link to="/products/1" class="dropdown-item">List Products</router-link></li>
               <li><router-link to="/product_categories/1" class="dropdown-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">Categories</router-link></li>
-              <li><hr class="dropdown-divider" /></li>
-              <li><router-link to="/add_product" class="dropdown-item">Add New Product</router-link></li>
+              <li><router-link to="/allergens/1" class="dropdown-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">Allergens</router-link></li>
             </ul>
           </li>
           <li class="nav-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">
@@ -67,6 +68,11 @@
 
 <script>
 export default {
+  data(){
+    return {
+      productsLinks: ['Products - List', 'Products - Add', 'Products - Categories', 'Products - Allergens']
+    }
+  },
   methods: {
     logout(){
       this.$store.commit('resetToken')
