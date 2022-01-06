@@ -43,7 +43,7 @@ Main:
       - [x] List - Admin
     - [x] UI for product
       - [x] UI for categories - product
-      - [ ] UI for allergens
+      - [x] UI for allergens
       - [ ] UI for units
     - [ ] UI for diaries
       - [ ] UI for entries
