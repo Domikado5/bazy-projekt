@@ -13,6 +13,7 @@ import AddProduct from "@/views/Products/AddProduct.vue"
 import Product from "@/views/Products/Product.vue"
 import ProductCategories from "@/views/Products/Categories.vue"
 import Allergens from "@/views/Products/Allergens.vue"
+import Units from "@/views/Products/Units.vue"
 
 const routes = [
   {
@@ -84,6 +85,11 @@ const routes = [
     path: "/allergens/:page",
     name: "Products - Allergens",
     component: Allergens
+  },
+  {
+    path: "/units",
+    name: "Products - Units",
+    component: Units
   }
 ];
 

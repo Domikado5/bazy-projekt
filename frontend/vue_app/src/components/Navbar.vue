@@ -40,6 +40,7 @@
               <li><router-link to="/products/1" class="dropdown-item">List Products</router-link></li>
               <li><router-link to="/product_categories/1" class="dropdown-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">Categories</router-link></li>
               <li><router-link to="/allergens/1" class="dropdown-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">Allergens</router-link></li>
+              <li><router-link to="/units" class="dropdown-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">Units</router-link></li>
             </ul>
           </li>
           <li class="nav-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">
@@ -70,7 +71,7 @@
 export default {
   data(){
     return {
-      productsLinks: ['Products - List', 'Products - Add', 'Products - Categories', 'Products - Allergens']
+      productsLinks: ['Products - List', 'Products - Add', 'Products - Categories', 'Products - Allergens', 'Products - Units']
     }
   },
   methods: {

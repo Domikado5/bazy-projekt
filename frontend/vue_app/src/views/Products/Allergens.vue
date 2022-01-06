@@ -1,8 +1,8 @@
 <template>
     <div class="container-fluid">
+        <h1>Allergens</h1>
         <div class="red lighten-4 red-text" v-if="message && message.detail">{{ message.detail }}</div>
         <div class="row">
-            <h1>Allergens</h1>
             <div>
                 <button class="btn blue lighten-4 blue-text" data-bs-toggle="modal" :data-bs-target="'#createModal'">Create Allergen</button>
                 <div class="modal fade" :id="'createModal'" tabindex="-1" :aria-labelledby="'createModalLabel'" aria-hidden="true">
