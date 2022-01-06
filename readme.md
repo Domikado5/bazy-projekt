@@ -31,7 +31,7 @@ Main:
 - [ ] Create UI in Vue.js
   - [x] Create Login Page
   - [x] Configure VUEX for storing authentication Token
-  - [ ] Create UI for CRUD (3/11)
+  - [ ] Create UI for CRUD
     - [ ] Pagination for list elements
     - [x] UI for Post
       - [x] UI for Comment
@@ -44,7 +44,7 @@ Main:
     - [x] UI for product
       - [x] UI for categories - product
       - [x] UI for allergens
-      - [ ] UI for units
+      - [x] UI for units
     - [ ] UI for diaries
       - [ ] UI for entries
     - [ ] UI for sets
