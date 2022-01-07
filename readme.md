@@ -47,7 +47,7 @@ Main:
       - [x] UI for units
     - [ ] UI for diaries
       - [ ] UI for entries
-    - [ ] UI for sets
+    - [x] UI for sets
       - [ ] UI for categories - set
 
 Optional:
