@@ -45,8 +45,8 @@ Main:
       - [x] UI for categories - product
       - [x] UI for allergens
       - [x] UI for units
-    - [ ] UI for diaries
-      - [ ] UI for entries
+    - [x] UI for diaries
+      - [x] UI for entries
     - [x] UI for sets
       - [x] UI for categories - set
 
