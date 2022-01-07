@@ -33,6 +33,8 @@ Main:
   - [x] Configure VUEX for storing authentication Token
   - [ ] Create UI for CRUD
     - [ ] Pagination for list elements
+    - [ ] Filtering queries
+    - [ ] Sorting queries
     - [x] UI for Post
       - [x] UI for Comment
     - [x] UI for User
