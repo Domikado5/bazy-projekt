@@ -48,7 +48,7 @@ Main:
     - [ ] UI for diaries
       - [ ] UI for entries
     - [x] UI for sets
-      - [ ] UI for categories - set
+      - [x] UI for categories - set
 
 Optional:
 - [x] Make REST API.
