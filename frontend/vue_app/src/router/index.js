@@ -15,6 +15,7 @@ import ProductCategories from "@/views/Products/Categories.vue"
 import Allergens from "@/views/Products/Allergens.vue"
 import Units from "@/views/Products/Units.vue"
 import Sets from "@/views/Sets/Sets.vue"
+import SetCategories from "@/views/Sets/SetCategories.vue"
 
 const routes = [
   {
@@ -96,6 +97,11 @@ const routes = [
     path: "/sets/:page",
     name: "Sets",
     component: Sets
+  },
+  {
+    path: "/set_categories",
+    name: "Set - Categories",
+    component: SetCategories
   },
 ];
 

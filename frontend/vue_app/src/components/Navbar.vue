@@ -46,6 +46,9 @@
           <li class="nav-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">
             <router-link class="nav-link" active-class="active" to="/users/1">Users</router-link>
           </li>
+          <li class="nav-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">
+            <router-link class="nav-link" active-class="active" to="/set_categories">Set Categories</router-link>
+          </li>
         </ul>
         <li class="dropdown" v-if="$store.getters.getToken != null">
             <button class="btn btn-outline-dark dropdown-toggle" type="button" data-bs-display="static" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
