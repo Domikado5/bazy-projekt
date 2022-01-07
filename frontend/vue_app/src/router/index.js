@@ -14,6 +14,7 @@ import Product from "@/views/Products/Product.vue"
 import ProductCategories from "@/views/Products/Categories.vue"
 import Allergens from "@/views/Products/Allergens.vue"
 import Units from "@/views/Products/Units.vue"
+import Sets from "@/views/Sets/Sets.vue"
 
 const routes = [
   {
@@ -90,7 +91,12 @@ const routes = [
     path: "/units",
     name: "Products - Units",
     component: Units
-  }
+  },
+  {
+    path: "/sets/:page",
+    name: "Sets",
+    component: Sets
+  },
 ];
 
 const router = createRouter({

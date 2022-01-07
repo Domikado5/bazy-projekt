@@ -179,6 +179,13 @@ class ProductUpdate(BaseModel):
     allergens: Optional[List[int]] = None
 
 
+class ProductQuery(BaseModel):
+    product_name: Optional[str] = None # used to filter products by name
+    exclude_products: Optional[List[int]] = None # used to exclude list of products (.i.e when quering the products for set form)
+    allergens: Optional[List[int]] = None # used to filter products with certain allergens
+    verified: Optional[str] = None # used to filter only verified or not verified products
+
+
 class Entry(ormar.Model):
     class Meta(BaseMeta):
         tablename = "entries"

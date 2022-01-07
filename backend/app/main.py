@@ -17,6 +17,7 @@ from app.db import (
     AllergenUpdate,
     ProductCategory,
     ProductCategoryUpdate,
+    ProductQuery,
     Product,
     ProductUpdate,
     Entry,
@@ -36,6 +37,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import json
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from ormar import and_
 
 
 app = FastAPI(title="Fitapka")
@@ -784,6 +786,20 @@ async def read_products(page_number: int):
     return products
 
 
+# Read Products - Filter by name
+@app.post("/products/filter")
+async def read_products(query: ProductQuery):
+    if not (products := await Product.objects.select_related(['sets']).
+    filter((Product.product_name.icontains(query.product_name)) & ~(Product.id.in_(query.exclude_products))).all()):
+        return []
+        # product_name__icontains = query.product_name).exclude(sets__id__exact = query.set)
+    result = []
+    print(len(products))
+    for product in products:
+        result.append(product.dict(exclude_through_models=True))
+    return result
+
+
 # Update Products
 @app.put("/products/{product_id}")
 async def update_product(
@@ -1124,14 +1140,45 @@ async def delete_set_category(category_id: int, user=Depends(auth_handler.auth_w
 
 
 # Create Set
-@app.post("/sets", response_model=Set)
+@app.post("/sets")
 async def create_set(set: Set, user=Depends(auth_handler.auth_wrapper)):
     if not set.set_name:
         raise HTTPException(status_code=400, detail="Set name cannot be an empty string")
     if await Set.objects.get_or_none(owner=user["id"], set_name=set.set_name):
         raise HTTPException(status_code=400, detail=f"Set {set.set_name} already exists")
     set.owner = await User.objects.get(id=user["id"])
-    return await set.save()
+
+    if set.products is not None:
+        products = []
+        for product_id in set.products:
+            if (product := await Product.objects.get_or_none(id=product_id)) is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Set: Product of given ID: {product_id} not found",
+                )
+            products.append(product)
+    
+    if set.categories is not None:
+        categories = []
+        for category_id in set.categories:
+            if (category := await SetCategory.objects.get_or_none(id=category_id)) is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Set: Category of given ID: {category_id} not found",
+                )
+            categories.append(category)
+
+    set.categories = []
+    set.products = []
+    set = await set.save()
+    if products:
+        for product in products:
+            await set.products.add(product)
+    if categories:
+        for category in categories:
+            await set.categories.add(category)
+
+    return set
 
 
 # Read Set
