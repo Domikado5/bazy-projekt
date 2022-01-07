@@ -789,7 +789,7 @@ async def read_products(page_number: int):
 # Read Products - Filter by name
 @app.post("/products/filter")
 async def read_products(query: ProductQuery):
-    if not (products := await Product.objects.select_related(['sets']).
+    if not (products := await Product.objects.select_related(['sets', 'unit']).
     filter((Product.product_name.icontains(query.product_name)) & ~(Product.id.in_(query.exclude_products))).all()):
         return []
         # product_name__icontains = query.product_name).exclude(sets__id__exact = query.set)
@@ -971,7 +971,8 @@ async def read_diary(diary_id: int, user=Depends(auth_handler.auth_wrapper)):
     diary = await Diary.objects.select_related(["owner"]).filter(id=diary_id).all()
     if diary[0].owner.id != user["id"]:
         raise HTTPException(status_code=403, detail="Unauthorized")
-    return diary[0].dict(exclude_through_models=True)
+    entries = await Entry.objects.select_related(['product_id', 'product_id__unit']).filter(diary_id=diary[0].id).all()
+    return {'diary': diary[0].dict(exclude_through_models=True), 'entries': entries}
 
 
 # Read Diaries - Paginate
@@ -981,7 +982,10 @@ async def read_diary(page_number: int, user=Depends(auth_handler.auth_wrapper)):
         raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     diaries = []
     for diary in await Diary.objects.select_related([Diary.owner]).paginate(page_number).filter(owner__id=user["id"]).all():
-        diaries.append(diary.dict(exclude_through_models=True))
+        entries = []
+        for entry in await Entry.objects.select_related(['product_id']).filter(diary_id=diary.id).all():
+            entries.append(entry)
+        diaries.append({'diary': diary.dict(exclude_through_models=True), 'entries': entries})
     return diaries
 
 
@@ -990,7 +994,7 @@ async def read_diary(page_number: int, user=Depends(auth_handler.auth_wrapper)):
 async def update_diary(diary_id: int, data: DiaryUpdate, user=Depends(auth_handler.auth_wrapper)):
     if (diary := await Diary.objects.get_or_none(id=diary_id)) is None:
         raise HTTPException(status_code=404, detail=f"Diary of given ID: {diary_id} not found")
-    if await Diary.objects.get_or_none(date=data.date):
+    if await Diary.objects.get_or_none(date=data.date, owner=user["id"]):
         raise HTTPException(status_code=404, detail=f"Diary of given Date: {data.date} already exists")
     if data.date is not None:
         await diary.update(date=data.date)
@@ -1023,11 +1027,12 @@ async def create_entry(entry: Entry, user=Depends(auth_handler.auth_wrapper)):
     entry.product_id = product
     entry.diary_id = diary
     
+    await entry.save()
     conn = await asyncpg.connect("postgresql://fitapka:fitapka@db:5432/fitapka")
     await conn.execute(f"CALL updateDiary({int(entry.diary_id.id)}, {int(entry.product_id.id)}, {0})")
     await conn.close()
 
-    return await entry.save()
+    return entry
 
 
 # Read Entry

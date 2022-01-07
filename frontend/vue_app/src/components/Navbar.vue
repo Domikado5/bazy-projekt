@@ -59,7 +59,7 @@
               aria-labelledby="userDropdown"
             >
               <li><router-link :to="'/account/' + $store.getters.getUser.id" class="dropdown-item">Your Profile</router-link></li>
-              <li><a href="#" class="dropdown-item">Your Diaries</a></li>
+              <li><router-link to="/diaries/1" class="dropdown-item">Your Diaries</router-link></li>
               <li><router-link to="/sets/1" class="dropdown-item">Your Sets</router-link></li>
               <li><hr class="dropdown-divider" /></li>
               <li><a href="#" @click="logout" class="dropdown-item">Logout</a></li>

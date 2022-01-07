@@ -16,6 +16,8 @@ import Allergens from "@/views/Products/Allergens.vue"
 import Units from "@/views/Products/Units.vue"
 import Sets from "@/views/Sets/Sets.vue"
 import SetCategories from "@/views/Sets/SetCategories.vue"
+import Diaries from "@/views/Diaries/Diaries.vue"
+import Diary from "@/views/Diaries/Diary.vue"
 
 const routes = [
   {
@@ -103,6 +105,16 @@ const routes = [
     name: "Set - Categories",
     component: SetCategories
   },
+  {
+    path: "/diaries/:page",
+    name: "Diaries",
+    component: Diaries
+  },
+  {
+    path: "/diary/:id",
+    name: "Diary",
+    component: Diary
+  }
 ];
 
 const router = createRouter({
