@@ -1,8 +1,14 @@
 # app/main.py
 
+from datetime import datetime
 import decimal
 from fastapi import FastAPI, HTTPException, Depends, Response
 from app.db import (
+    CommentQuery,
+    PostQuery,
+    ProductQuery2,
+    SetQuery,
+    UserQuery,
     database,
     AuthCredentials,
     User,
@@ -38,6 +44,8 @@ import json
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from ormar import and_
+import datetime
+import calendar
 
 
 app = FastAPI(title="Fitapka")
@@ -143,20 +151,23 @@ async def read_user(user_id: int, user=Depends(auth_handler.auth_wrapper)):
 
 
 # Read Users - Pagination
-@app.get("/users/page/{page_number}")
-async def read_users(page_number: int, user=Depends(auth_handler.auth_wrapper)):
+@app.post("/users/page/{page_number}")
+async def read_users(page_number: int, query: UserQuery, user=Depends(auth_handler.auth_wrapper)):
     if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorize")
-    if not (await User.objects.paginate(page_number).all()):
-        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
-    users = []
-    for user_data in (
-        await User.objects.select_related(["diaries", "posts", "sets"])
-        .paginate(page_number)
-        .all()
-    ):
-        users.append(user_data.dict(exclude_through_models=True))
-    return users
+    sort = 'id'
+    if query.sort and query.sort in ['id', '-id', 'username', '-username']:
+        sort = query.sort
+    username = '' if not query.username else query.username
+    role = ''
+    if query.role and query.role in ['admin', 'writer', 'user']:
+        role = query.role
+    if not (users := await User.objects.filter(username__icontains = username, role__icontains = role).order_by(sort).paginate(page_number).all()):
+        []
+    users2 = []
+    for user_data in users:
+        users2.append(user_data.dict(exclude_through_models=True))
+    return users2
 
 
 # Update User
@@ -258,13 +269,18 @@ async def read_post(post_id: int):
 
 
 # Read Posts - Pagination
-@app.get("/posts/page/{page_number}")
-async def read_posts(page_number: int):
-    if not (await Post.objects.paginate(page_number).all()):
-        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
+@app.post("/posts/page/{page_number}")
+async def read_posts(page_number: int, query: PostQuery):
+    searchTitle = '' if query.title is None else query.title
+    sort = 'title'
+    if query.sort:
+        if query.sort and query.sort in ['title', '-title', 'date', '-date']:
+            sort = query.sort
+    if not (await Post.objects.filter(title__icontains=searchTitle).paginate(page_number).order_by(sort).all()):
+        return []
     posts = []
     for post in (
-        await Post.objects.select_related(["comments", "author"]).paginate(page_number).all()
+        await Post.objects.select_related(["comments", "author"]).filter(title__icontains=searchTitle).paginate(page_number).order_by(sort).all()
     ):
         posts.append(post.dict(exclude_through_models=True))
     
@@ -336,18 +352,21 @@ async def read_comment(comment_id: int):
 
 
 # Read Comments - Pagination (Read All Comments From Post of Given ID)
-@app.get("/comments/{post_id}/page/{page_number}")
-async def read_comments(post_id: int, page_number: int):
+@app.post("/comments/{post_id}/page/{page_number}")
+async def read_comments(post_id: int, page_number: int, query: CommentQuery):
     if await Post.objects.get_or_none(id=post_id) is None:
         raise HTTPException(
             status_code=404, detail=f"Post of given ID: {post_id} not found"
         )
+    sort = "date"
+    if query.sort and query.sort in ["date", "-date"]:
+        sort = query.sort
     if not (
-        comments := await Comment.objects.filter(root_post=post_id)
+        comments := await Comment.objects.filter(root_post=post_id).order_by(sort)
         .paginate(page=page_number)
         .all()
     ):
-        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
+        return []
     return comments
 
 
@@ -565,7 +584,8 @@ async def create_product_category(
             status_code=404,
             detail=f"Root Category: Product Category of given ID: {product_category.root_category} not found",
         )
-    product_category.root_category = root_category
+    if product_category.root_category:
+        product_category.root_category = root_category
     return await product_category.save()
 
 
@@ -772,18 +792,29 @@ async def read_product(product_id: int):
 
 
 # Read Products - Paginate
-@app.get("/products/page/{page_number}")
-async def read_products(page_number: int):
-    if not (products := await Product.objects.paginate(page=page_number).all()):
-        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
-    products = []
-    for product in (
-        await Product.objects.select_related(["allergens", "sets", "unit", "categories"])
-        .paginate(page_number)
-        .all()
-    ):
-        products.append(product.dict(exclude_through_models=True))
-    return products
+@app.post("/products/page/{page_number}")
+async def read_products(page_number: int, query: ProductQuery2):
+    sort = 'product_name'
+    if query.sort and query.sort in ['product_name', '-product_name', 'fats', '-fats', 'proteins', '-proteins', 'carbohydrates', '-carbohydrates', 'calories', '-calories']:
+        sort = query.sort
+    product_name = '' if query.product_name is None else query.product_name
+    allergens = [] if not query.allergens else query.allergens
+    category = None if not query.categories else query.categories
+    verified = None if not query.verified else query.verified
+    querySet = Product.objects.select_related(["allergens", "sets", "unit", "categories"]).filter(
+        (Product.product_name.icontains(product_name)) & ((Product.allergens.id.isnull(True))  | ~(Product.allergens.id.in_(allergens)))
+    )
+    if category:
+        print(category)
+        querySet = querySet.filter((Product.categories.id.in_([category])))
+    if verified in ['verified', 'not verified']:
+        querySet = querySet.filter((Product.verified == verified))
+    if not (products := await querySet.order_by(sort).paginate(page=page_number).all()):
+        return []
+    products2 = []
+    for product in products:
+        products2.append(product.dict(exclude_through_models=True))
+    return products2
 
 
 # Read Products - Filter by name
@@ -982,6 +1013,30 @@ async def read_diary(page_number: int, user=Depends(auth_handler.auth_wrapper)):
         raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     diaries = []
     for diary in await Diary.objects.select_related([Diary.owner]).paginate(page_number).filter(owner__id=user["id"]).all():
+        entries = []
+        for entry in await Entry.objects.select_related(['product_id']).filter(diary_id=diary.id).all():
+            entries.append(entry)
+        diaries.append({'diary': diary.dict(exclude_through_models=True), 'entries': entries})
+    return diaries
+
+
+# Read Diaries - Date
+@app.get("/diaries/date/{date}")
+async def read_diary(date: str, user=Depends(auth_handler.auth_wrapper)):
+    days = []
+    if date:
+        dates = date.split('-')
+        year = int(dates[0])
+        month = int(dates[1])
+        number_of_days = calendar.monthrange(year, month)[1]
+        first_date = datetime.date(year, month, 1)
+        last_date = datetime.date(year, month, number_of_days)
+        delta = last_date - first_date
+        days = [(first_date + datetime.timedelta(days=i)).strftime('%Y-%m-%d') for i in range(delta.days + 1)]
+    if not (await Diary.objects.filter(owner__id=user["id"]).filter(date__in=days).all()):
+        return []
+    diaries = []
+    for diary in await Diary.objects.select_related([Diary.owner]).filter(owner__id=user["id"]).filter(date__in=days).all():
         entries = []
         for entry in await Entry.objects.select_related(['product_id']).filter(diary_id=diary.id).all():
             entries.append(entry)
@@ -1197,10 +1252,20 @@ async def read_set(set_id: int, user=Depends(auth_handler.auth_wrapper)):
 
 
 # Read Sets - Paginate
-@app.get("/sets/page/{page_number}")
-async def read_sets(page_number: int, user=Depends(auth_handler.auth_wrapper)):
-    if not (sets := await Set.objects.select_related(['owner', 'products', 'categories']).paginate(page_number).filter(owner__id=user["id"]).all()):
-        raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
+@app.post("/sets/page/{page_number}")
+async def read_sets(page_number: int, query: SetQuery, user=Depends(auth_handler.auth_wrapper)):
+    sort = 'set_name'
+    if query.sort and query.sort in ['set_name', '-set_name']:
+        sort = query.sort
+    set_name = '' if not query.set_name else query.set_name
+    categories = [] if not query.categories else query.categories
+    querySet = Set.objects.filter(owner__id=user["id"]).filter(set_name__icontains = set_name)
+    if len(categories) > 0:
+        querySet = querySet.filter(Set.categories.id.in_(categories))
+    if not (sets2 := await querySet.select_related(['owner', 'products', 'categories']).order_by(sort).paginate(page_number).all()):
+        return []
+    ids = [set_.id for set_ in sets2]
+    sets = await Set.objects.filter(id__in = ids).select_related(['owner', 'products', 'categories']).order_by(sort).paginate(page_number).all()
     return [set.dict(exclude_through_models=True) for set in sets]
 
 

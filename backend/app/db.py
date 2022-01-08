@@ -38,6 +38,12 @@ class User(ormar.Model):
     )
 
 
+class UserQuery(BaseModel):
+    username: Optional[str] = None
+    role: Optional[str] = None
+    sort: Optional[str] = None
+
+
 class UserUpdate(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
@@ -58,6 +64,11 @@ class Post(ormar.Model):
     author: User = ormar.ForeignKey(User)
 
 
+class PostQuery(BaseModel):
+    title: Optional[str] = None
+    sort: Optional[str] = None
+
+
 class PostUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
@@ -75,6 +86,10 @@ class Comment(ormar.Model):
         nullable=False, default=datetime.datetime.now()
     )
     root_post: Post = ormar.ForeignKey(Post)
+
+
+class CommentQuery(BaseModel):
+    sort: Optional[str] = None
 
 
 class CommentUpdate(BaseModel):
@@ -164,6 +179,14 @@ class Product(ormar.Model):
         through_reverse_relation_name="allergen_id",
         related_name="products"
     )
+
+
+class ProductQuery2(BaseModel):
+    product_name: Optional[str] = None
+    categories: Optional[int] = None
+    allergens: Optional[List[int]] = None
+    verified: Optional[str] = None
+    sort: Optional[str] = None
 
 
 class ProductUpdate(BaseModel):
@@ -264,6 +287,12 @@ class Set(ormar.Model):
         through_reverse_relation_name="category_id",
         related_name="sets"
     )
+
+
+class SetQuery(BaseModel):
+    set_name: Optional[str] = None
+    categories: Optional[List[int]] = None
+    sort: Optional[str] = None
 
 
 class SetUpdate(BaseModel):

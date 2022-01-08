@@ -31,6 +31,12 @@
             </div>
             <div class="red lighten-4 red-text" v-if="message && message.detail">{{ message.detail }}</div>
         </div>
+        <div class="row my-3">
+            <search-form @search-update="refrshPage($event)" type="Diaries" :dateData="new Date()"></search-form>
+        </div>
+        <div class="row" v-if="diaries && diaries.length == 0">
+            <h2>Diaries not found</h2>
+        </div>
         <div class="row">
             <div v-for="diary in diaries" :key="diary.id" class="col-12 col-lg-4">
                 <div class="card">
@@ -63,6 +69,9 @@
                                             <h5 class="modal-title" :id="'deleteModalLabel' + diary.id">Delete Diary</h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
+                                        <div class="modal-body">
+                                            {{ diary.date }}
+                                        </div>
                                         <div class="modal-footer">
                                             <button @click="deleteDiary(diary.id)" type="button" class="btn red lighten-4 red-text">Yes</button>
                                             <button type="button" class="btn green lighten-4 green-text" data-bs-dismiss="modal">No</button>
@@ -81,6 +90,7 @@
 </template>
 
 <script>
+import SearchForm from '../../components/SearchForm.vue'
 
 const today = new Date()
 const day = (today.getDate() < 10) ? ('0' + today.getDate()) : today.getDate()
@@ -88,6 +98,7 @@ const month = (today.getMonth()+1 < 10) ? ('0' + (today.getMonth()+1)) : (today.
 const year = today.getFullYear()
 
 export default {
+  components: { SearchForm },
     data(){
         return {
             message: null,
@@ -98,7 +109,7 @@ export default {
     },
     methods: {
         async getDiaries(){
-            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/diaries/page/' + this.$route.params.page, 'GET', {}, this.$store.getters.getToken)
+            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/diaries/date/' + this.date, 'GET', {}, this.$store.getters.getToken)
             if (this.message && !this.message.detail){
                 this.diaries = this.message
                 this.message = null
@@ -132,6 +143,14 @@ export default {
                 document.querySelector('#createModalLabel' + ' + button').click()
                 this.$router.push("/diary/" + this.formMessage.id)
             }
+        },
+        refrshPage(obj){
+            const today = obj.date
+            const day = (today.getDate() < 10) ? ('0' + today.getDate()) : today.getDate()
+            const month = (today.getMonth()+1 < 10) ? ('0' + (today.getMonth()+1)) : (today.getMonth()+1)
+            const year = today.getFullYear()
+            this.date =  year + '-' + month + '-' + day
+            this.getDiaries()
         }
     },
     created(){

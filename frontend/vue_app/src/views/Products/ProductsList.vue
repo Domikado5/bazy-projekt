@@ -2,8 +2,14 @@
     <div class="container-fluid">
         <h1>Products List - Page {{ $route.params.page }}</h1>
         <div class="red lighten-4 red-text" v-if="message && message.detail">{{ message.detail }}</div>
+        <div class="row" v-if="allergens && categories">
+            <search-form @search-update="updateQuery($event)" type="Products" :allergens-data="allergens" :product-categories-data="categories"></search-form>
+        </div>
         <div class="table-responsive">
-        <table class="table table-striped">
+        <div v-if="products && products.length == 0">
+            <h2>Not found</h2>
+        </div>
+        <table class="table table-striped" v-if="products && products.length > 0">
             <thead>
                 <tr>
                     <th scope="col">ID</th>
@@ -62,7 +68,7 @@
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
-                                <product-form @product-update="refreshList($event)" :product-data="product" :edit="true"></product-form>
+                                <product-form @product-update="refreshList($event)" :product-data="product" :categories-data="categories" :units-data="units" :allergens-data="allergens" :edit="true"></product-form>
                             </div>
                             </div>
                         </div>
@@ -76,18 +82,33 @@
 
 <script>
 import ProductForm from '@/components/ProductForm.vue'
+import SearchForm from '@/components/SearchForm.vue'
 export default {
-    components: { ProductForm },
+    components: { ProductForm, SearchForm },
     data(){
         return {
-      
             products: null,
             message: null,
+            query: {
+                product_name: null,
+                categories: null, 
+                allergens: null,
+                verified: null,
+                sort: null,
+            },
+            categories: null,
+            units: null,
+            allergens: null,
         }
     },
     methods: {
+        async getSelects(){
+            this.categories = await this.$fetchUtil(this.$store.getters.getUrl + '/product_categories', 'GET', {}, this.$store.getters.getToken)
+            this.units = await this.$fetchUtil(this.$store.getters.getUrl + '/units', 'GET', {}, this.$store.getters.getToken)
+            this.allergens = await this.$fetchUtil(this.$store.getters.getUrl + '/allergens', 'GET', {}, this.$store.getters.getToken)
+        },
         async getProducts(){
-            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/products/page/' + this.$route.params.page, 'GET', {}, this.$store.getters.getToken)
+            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/products/page/' + this.$route.params.page, 'POST', this.query, this.$store.getters.getToken)
             if (this.message && !this.message.detail){
                 this.products = this.message
                 this.message = null
@@ -103,9 +124,21 @@ export default {
         refreshList(id){
             document.querySelector('#editModalLabel' + id + ' + button').click()
             this.getProducts()
+        },
+        updateQuery(q){
+            this.query = {
+                product_name: q.search,
+                categories: q.categories, 
+                allergens: (q.allergens) ? q.allergens : [],
+                verified: q.verified,
+                sort: q.sort,
+            }
+            console.log(q)
+            this.getProducts()
         }
     },
     created(){
+        this.getSelects()
         this.getProducts()
     }
 }

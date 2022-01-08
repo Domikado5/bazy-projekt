@@ -2,6 +2,9 @@
     <div class="container-fluid">
         <h1>Users List - Page {{ $route.params.page }}</h1>
         <h3 class="red lighten-4 red-text" v-if="message && message.detail">{{ message.detail }}</h3>
+        <div>
+            <search-form @search-update="updateQuery($event)" type="Users"></search-form>
+        </div>
         <div class="table-responsive">
         <table class="table table-striped">
             <thead>
@@ -36,6 +39,9 @@
                                     <h5 class="modal-title" :id="'deleteModalLabel' + user.id">Are you sure?</h5>
                                     <button type="button" :id="'deleteModalClose' + user.id" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
+                                <div class="modal-body">
+                                    You are deleting <span class="blue-text">{{ user.username }}</span>
+                                </div>
                                 <div class="modal-footer">
                                     <button @click="deleteUser(user.id)" type="button" class="btn red lighten-4 red-text">Yes</button>
                                     <button type="button" class="btn green lighten-4 green-text" data-bs-dismiss="modal">No</button>
@@ -65,19 +71,25 @@
 
 <script>
 import UserForm from '@/components/UserForm.vue'
+import SearchForm from '@/components/SearchForm.vue'
 
 
 export default {
-  components: { UserForm },
+  components: { UserForm, SearchForm },
     data(){
         return {
             users: null,
-            message: null
+            message: null,
+            query: {
+                username: null,
+                role: null,
+                sort: null,
+            }
         }
     },
     methods: {
         async getUsers(){
-            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/users/page/' + this.$route.params.page, 'GET', {}, this.$store.getters.getToken)
+            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/users/page/' + this.$route.params.page, 'POST', this.query, this.$store.getters.getToken)
             if (this.message && !this.message.detail){
                 this.users = this.message
                 this.message = null
@@ -98,6 +110,15 @@ export default {
                     this.getUsers()
                 }
             }
+        },
+        updateQuery(q){
+            this.query = {
+                username: q.search,
+                role: q.role,
+                sort: q.sort,
+            }
+            console.log(q)
+            this.getUsers()
         }
     },
     created(){

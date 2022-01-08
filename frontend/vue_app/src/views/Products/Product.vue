@@ -4,10 +4,10 @@
         <div class="row" v-if="product">
             <h2>{{ product.product_name }} <span class="badge white-text" :class="{'green': product.verified == 'verified', 'red': product.verified != 'verified'}">{{ product.verified }}</span></h2>
             <h3 class="purple-text text-accent-2">{{ product.categories.category_name }}</h3>
-            <h3>Fats: {{ product.fats }}</h3>
-            <h3>Proteins: {{ product.proteins }}</h3>
-            <h3>Carbohydrates: {{ product.carbohydrates }}</h3>
-            <h3>Calories: {{ product.calories }}</h3>
+            <h3>Fats: {{ product.fats }}g</h3>
+            <h3>Proteins: {{ product.proteins }}g</h3>
+            <h3>Carbohydrates: {{ product.carbohydrates }}g</h3>
+            <h3>Calories: {{ product.calories }}kcal</h3>
             <h3>Amount: {{ product.base_amount }} {{ product.unit.unitname }}</h3>
             <h3 v-if="product.allergens.length > 0">Allergens:</h3>
             <h4 v-for="allergen in product.allergens" :key="allergen.id">{{ allergen.allergen }}</h4>

@@ -61,9 +61,9 @@ export default {
     data(){
         return {
             message: null,
-            categories: null,
-            units: null,
-            allergens: null,
+            categories: this.categoriesData,
+            units: this.unitsData,
+            allergens: this.allergensData,
             verified: this.productData.verified == 'verified',
             prod_id: this.productData.id,
             product: {
@@ -82,14 +82,12 @@ export default {
     },
     props: {
         productData: Object,
-        edit: Boolean
+        edit: Boolean,
+        categoriesData: Array,
+        unitsData: Array,
+        allergensData: Array
     },
     methods: {
-        async getSelects(){
-            this.categories = await this.$fetchUtil(this.$store.getters.getUrl + '/product_categories', 'GET', {}, this.$store.getters.getToken)
-            this.units = await this.$fetchUtil(this.$store.getters.getUrl + '/units', 'GET', {}, this.$store.getters.getToken)
-            this.allergens = await this.$fetchUtil(this.$store.getters.getUrl + '/allergens', 'GET', {}, this.$store.getters.getToken)
-        },
         async resolveProduct(){
             const method = (this.edit == true) ? 'PUT' : 'POST'
             const endpoint = (this.prod_id) ? '/products/' + this.prod_id : '/products'
@@ -99,9 +97,6 @@ export default {
                 this.$emit('productUpdate', this.message.id)
             }
         }
-    },
-    created(){
-        this.getSelects()
     }
 }
 </script>

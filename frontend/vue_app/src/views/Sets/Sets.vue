@@ -4,6 +4,9 @@
         <h1>Your sets</h1>
         <div class="red lighten-4 red-text" v-if="message && message.detail">{{ message.detail }}</div>
         </div>
+        <div class="row" v-if="categories">
+            <search-form @search-update="updateQuery($event)" type="Sets" :set-categories-data="categories"></search-form>
+        </div>
         <div class="row">
             <div class="col-12">
                 <button class="btn blue lighten-4 blue-text" data-bs-toggle="modal" :data-bs-target="'#createModal'">Create New Set</button>
@@ -67,6 +70,9 @@
                                     <h5 class="modal-title" :id="'deleteModalLabel' + set.id">Delete Set</h5>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
+                                <div class="modal-body">
+                                    You are deleting <span class="blue-text">{{set.set_name}}</span>
+                                </div>
                                 <div class="modal-footer">
                                     <button @click="deleteSet(set.id)" type="button" class="btn red lighten-4 red-text">Yes</button>
                                     <button type="button" class="btn green lighten-4 green-text" data-bs-dismiss="modal">No</button>
@@ -83,19 +89,25 @@
 
 <script>
 import SetForm from '@/components/SetForm.vue'
+import SearchForm from '@/components/SearchForm.vue'
 export default {
-  components: { SetForm },
+  components: { SetForm, SearchForm },
     data(){
-        return {
+         return {
             message: null,
             sets: null,
             categories: null,
-            reload: 1
+            reload: 1,
+            query: {
+                set_name: null,
+                categories: null,
+                sort: null
+            }
         }
     },
     methods: {
         async getSets(){
-            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/sets/page/' + this.$route.params.page, 'GET', {}, this.$store.getters.getToken)
+            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/sets/page/' + this.$route.params.page, 'POST', this.query, this.$store.getters.getToken)
             if (this.message && !this.message.detail){
                 this.sets = this.message
                 this.message = null
@@ -122,6 +134,14 @@ export default {
                 document.querySelector('#editModalLabel' + obj.id + ' + button').click()
             }else if (obj.action == 'DELETE'){
                 document.querySelector('#deleteModalLabel' + obj.id + ' + button').click()
+            }
+            this.getSets()
+        },
+        updateQuery(obj){
+            this.query = {
+                set_name: obj.search,
+                sort: obj.sort,
+                categories: obj.categories
             }
             this.getSets()
         }
