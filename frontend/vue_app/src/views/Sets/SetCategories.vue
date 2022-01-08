@@ -60,6 +60,9 @@
                                             <h5 class="modal-title" :id="'deleteModalLabel' + category.id">Delete Category</h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
+                                        <div class="modal-body">
+                                            You are deleting <span class="blue-text">{{ category.category_name }}</span>
+                                        </div>
                                         <div class="modal-footer">
                                             <button @click="deleteCategory(category.id)" type="button" class="btn red lighten-4 red-text">Yes</button>
                                             <button type="button" class="btn green lighten-4 green-text" data-bs-dismiss="modal">No</button>
