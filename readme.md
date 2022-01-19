@@ -32,7 +32,7 @@ Main:
   - [x] Create Login Page
   - [x] Configure VUEX for storing authentication Token
   - [ ] Create UI for CRUD
-    - [ ] Pagination for list elements
+    - [x] Pagination for list elements
     - [ ] Adding products with sets
     - [x] Filtering and Sorting queries
       - [x] Posts
