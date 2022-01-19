@@ -66,16 +66,18 @@
             </tbody>
         </table>
         </div>
+        <pagination v-if="pages" :max="pages" @page-update="changePage($event)" :key="reload"></pagination>
     </div>
 </template>
 
 <script>
 import UserForm from '@/components/UserForm.vue'
 import SearchForm from '@/components/SearchForm.vue'
+import Pagination from '../../components/Pagination.vue'
 
 
 export default {
-  components: { UserForm, SearchForm },
+  components: { UserForm, SearchForm, Pagination },
     data(){
         return {
             users: null,
@@ -84,20 +86,26 @@ export default {
                 username: null,
                 role: null,
                 sort: null,
-            }
+            },
+            pages: null,
+            page: 1,
+            reload: 0
         }
     },
     methods: {
         async getUsers(){
-            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/users/page/' + this.$route.params.page, 'POST', this.query, this.$store.getters.getToken)
+            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/users/page/' + this.page, 'POST', this.query, this.$store.getters.getToken)
             if (this.message && !this.message.detail){
-                this.users = this.message
+                this.users = this.message.users
+                this.pages = this.message.pages
                 this.message = null
             }
         },
         refreshUser(id){
             document.querySelector("#userEditModalClose" + id).click()
             this.getUsers()
+            this.reload++
+            this.page = 1
         },
         async deleteUser(id){
             this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/users/' + id, 'DELETE', {}, this.$store.getters.getToken)
@@ -108,6 +116,8 @@ export default {
                 }else{
                     document.querySelector("#deleteModalClose" + id).click()
                     this.getUsers()
+                    this.reload++
+                    this.page = 1
                 }
             }
         },
@@ -118,6 +128,12 @@ export default {
                 sort: q.sort,
             }
             console.log(q)
+            this.getUsers()
+            this.reload++
+            this.page = 1
+        },
+        changePage(page){
+            this.page = page
             this.getUsers()
         }
     },

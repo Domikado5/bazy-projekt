@@ -73,24 +73,30 @@
                 </table>
             </div>
         </div>
+        <pagination v-if="pages" :max="pages" @page-update="changePage($event)" :key="reload"></pagination>
     </div>
 </template>
 
 <script>
 import UnitForm from '@/components/UnitForm.vue'
+import Pagination from '../../components/Pagination.vue'
 export default {
-    components: { UnitForm },
+    components: { UnitForm, Pagination },
     data(){
         return {
             message: null,
             units: null,
+            page: 1,
+            pages: null,
+            reload: 0
         }
     },
     methods: {
         async getUnits(){
-            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/units', 'GET', {}, this.$store.getters.getToken)
+            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/units/page/' + this.page, 'GET', {}, this.$store.getters.getToken)
             if (this.message && !this.message.detail){
-                this.units = this.message
+                this.units = this.message.units
+                this.pages = this.message.pages
                 this.message = null
             }
         },
@@ -108,6 +114,12 @@ export default {
             }else if (obj.action == 'DELETE'){
                 document.querySelector('#deleteModalLabel' + obj.id + ' + button').click()
             }
+            this.getUnits()
+            this.reload++
+            this.page = 1
+        },
+        changePage(page){
+            this.page = page
             this.getUnits()
         }
     },

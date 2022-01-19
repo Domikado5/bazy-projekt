@@ -50,7 +50,8 @@ export default {
     },
     computed: {
         noRepeat() {
-            return this.categories.filter(cat => cat.id != this.id)
+            if (this.categories)return this.categories.filter(cat => cat.id != this.id)
+            return []
         }
     },
     created(){

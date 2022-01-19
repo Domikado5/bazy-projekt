@@ -77,17 +77,22 @@
             </tbody>
         </table>
         </div>
+        <pagination v-if="pages" :max="pages" @page-update="changePage($event)" :key="reload"></pagination>
     </div>
 </template>
 
 <script>
 import ProductForm from '@/components/ProductForm.vue'
 import SearchForm from '@/components/SearchForm.vue'
+import Pagination from '@/components/Pagination.vue'
 export default {
-    components: { ProductForm, SearchForm },
+    components: { ProductForm, SearchForm, Pagination },
     data(){
         return {
             products: null,
+            pages: null,
+            page: 1,
+            reload: 0,
             message: null,
             query: {
                 product_name: null,
@@ -108,9 +113,10 @@ export default {
             this.allergens = await this.$fetchUtil(this.$store.getters.getUrl + '/allergens', 'GET', {}, this.$store.getters.getToken)
         },
         async getProducts(){
-            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/products/page/' + this.$route.params.page, 'POST', this.query, this.$store.getters.getToken)
+            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/products/page/' + this.page, 'POST', this.query, this.$store.getters.getToken)
             if (this.message && !this.message.detail){
-                this.products = this.message
+                this.products = this.message.products
+                this.pages = this.message.pages
                 this.message = null
             }
         },
@@ -119,11 +125,15 @@ export default {
             document.querySelector("#deleteModalLabel" + id + " + button").click()
             if (this.message && !this.message.detail){
                 this.getProducts()
+                this.page = 1
+                this.reload++
             }
         },
         refreshList(id){
             document.querySelector('#editModalLabel' + id + ' + button').click()
             this.getProducts()
+            this.page = 1
+            this.reload++
         },
         updateQuery(q){
             this.query = {
@@ -134,6 +144,12 @@ export default {
                 sort: q.sort,
             }
             console.log(q)
+            this.getProducts()
+            this.page = 1
+            this.reload++
+        },
+        changePage(page){
+            this.page = page
             this.getProducts()
         }
     },

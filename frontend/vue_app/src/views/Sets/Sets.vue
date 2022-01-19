@@ -84,14 +84,16 @@
                 </div>
             </div>
         </div>
+        <pagination v-if="pages" :max="pages" @page-update="changePage($event)" :key="reload2"></pagination>
     </div>
 </template>
 
 <script>
 import SetForm from '@/components/SetForm.vue'
 import SearchForm from '@/components/SearchForm.vue'
+import Pagination from '../../components/Pagination.vue'
 export default {
-  components: { SetForm, SearchForm },
+  components: { SetForm, SearchForm, Pagination },
     data(){
          return {
             message: null,
@@ -102,14 +104,18 @@ export default {
                 set_name: null,
                 categories: null,
                 sort: null
-            }
+            },
+            pages: null,
+            page: 1,
+            reload2: 0,
         }
     },
     methods: {
         async getSets(){
-            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/sets/page/' + this.$route.params.page, 'POST', this.query, this.$store.getters.getToken)
+            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/sets/page/' + this.page, 'POST', this.query, this.$store.getters.getToken)
             if (this.message && !this.message.detail){
-                this.sets = this.message
+                this.sets = this.message.sets
+                this.pages = this.message.pages
                 this.message = null
                 this.reload++
             }
@@ -136,6 +142,8 @@ export default {
                 document.querySelector('#deleteModalLabel' + obj.id + ' + button').click()
             }
             this.getSets()
+            this.reload2++
+            this.page = 1
         },
         updateQuery(obj){
             this.query = {
@@ -143,6 +151,12 @@ export default {
                 sort: obj.sort,
                 categories: obj.categories
             }
+            this.getSets()
+            this.reload2++
+            this.page = 1
+        },
+        changePage(page){
+            this.page = page
             this.getSets()
         }
     },

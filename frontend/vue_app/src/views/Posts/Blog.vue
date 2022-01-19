@@ -47,41 +47,54 @@
                     </div>
                 </div>
             </div>
+            <pagination v-if="pages" :max="pages" @page-update="changePage($event)" :key="reload"></pagination>
         </div>
     </div>
 </template>
 
 <script>
 import SearchForm from '@/components/SearchForm.vue'
+import Pagination from '@/components/Pagination.vue'
 export default {
-  components: { SearchForm },
+  components: { SearchForm, Pagination },
     data(){
         return {
             posts: null,
+            lastQuery: {title: '', sort: null},
+            reload: 0,
+            pages: null
         }
     },
     methods: {
-        async getPosts(query){
+        async getPosts(query, page){
             console.log("GET POST:")
             console.log(query)
-            this.posts = await this.$fetchUtil(this.$store.getters.getUrl + '/posts/page/1', 'POST', query, this.$store.getters.getToken)
+            const response = await this.$fetchUtil(this.$store.getters.getUrl + '/posts/page/' + page, 'POST', query, this.$store.getters.getToken)
+            this.posts = response.posts
+            this.pages = response.pages
+            console.log(this.pages)
         },
         async deletePost(id){
             await this.$fetchUtil(this.$store.getters.getUrl + '/posts/' + id, 'DELETE', {}, this.$store.getters.getToken)
             document.querySelector('#deleteModalLabel' + id + ' + button').click()
-            this.getPosts({title: '', sort: null})
+            this.getPosts(this.lastQuery, 1)
+            this.reload++
         },
         updateQuery(q){
             const query = {
                 title: q.search,
                 sort: q.sort
             }
-            console.log(q)
-            this.getPosts(query)
+            this.lastQuery = query
+            this.getPosts(query, 1)
+            this.reload++
+        },
+        changePage(page){
+            this.getPosts(this.lastQuery, page)
         }
     },
     created(){
-        this.getPosts({title: '', sort: null})
+        this.getPosts({title: '', sort: null}, 1)
     }
 }
 </script>

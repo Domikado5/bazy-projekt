@@ -1,5 +1,6 @@
 # app/main.py
 
+import math
 from datetime import datetime
 import decimal
 from fastapi import FastAPI, HTTPException, Depends, Response
@@ -162,12 +163,13 @@ async def read_users(page_number: int, query: UserQuery, user=Depends(auth_handl
     role = ''
     if query.role and query.role in ['admin', 'writer', 'user']:
         role = query.role
-    if not (users := await User.objects.filter(username__icontains = username, role__icontains = role).order_by(sort).paginate(page_number).all()):
+    if not (users := await User.objects.filter(username__icontains = username, role__icontains = role).order_by(sort).paginate(page_number, page_size=20).all()):
         []
     users2 = []
     for user_data in users:
         users2.append(user_data.dict(exclude_through_models=True))
-    return users2
+    pages = await User.objects.filter(username__icontains = username, role__icontains = role).order_by(sort).count()
+    return Response(content=json.dumps({"pages": math.ceil(pages/20), "users": jsonable_encoder(users2)}), media_type="application/json")
 
 
 # Update User
@@ -279,12 +281,15 @@ async def read_posts(page_number: int, query: PostQuery):
     if not (await Post.objects.filter(title__icontains=searchTitle).paginate(page_number).order_by(sort).all()):
         return []
     posts = []
+    pages = await Post.objects.select_related(["comments", "author"]).filter(title__icontains=searchTitle).order_by(sort).count()
+    if pages > 20:
+        pages -= 1
     for post in (
         await Post.objects.select_related(["comments", "author"]).filter(title__icontains=searchTitle).paginate(page_number).order_by(sort).all()
     ):
         posts.append(post.dict(exclude_through_models=True))
     
-    return posts
+    return Response(content=json.dumps({"pages": math.ceil(pages/20), "posts": jsonable_encoder(posts)}), media_type="application/json")
 
 
 # Update Posts
@@ -433,6 +438,18 @@ async def read_units():
     return units
 
 
+# Read Units - Paginate
+@app.get("/units/page/{page}")
+async def read_units(page: int):
+    units = []
+    for unit in await Unit.objects.select_related(["products"]).paginate(page=page, page_size=20).all():
+        units.append(unit.dict(exclude_through_models=True))
+    pages = await Unit.objects.select_related(["products"]).count()
+    if pages > 20:
+        pages -= 1
+    return Response(content=json.dumps({"pages": math.ceil(pages/20), "units": jsonable_encoder(units)}), media_type="application/json")
+
+
 # Update Unit
 @app.put("/units/{unit_id}")
 async def update_unit(
@@ -505,14 +522,17 @@ async def read_allergens_all():
 # Read Allergens - pagination
 @app.get("/allergens/page/{page_number}")
 async def read_allergens(page_number: int):
-    if not (await Allergen.objects.paginate(page=page_number).all()):
+    if not (await Allergen.objects.paginate(page=page_number, page_size=20).all()):
         raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     allergens = []
     for allergen in (
-        await Allergen.objects.select_related(["products"]).paginate(page_number).all()
+        await Allergen.objects.select_related(["products"]).paginate(page_number, page_size=20).all()
     ):
         allergens.append(allergen.dict(exclude_through_models=True))
-    return allergens
+    pages = await Allergen.objects.select_related(["products"]).count()
+    if pages > 20:
+        pages -= 1
+    return Response(content=json.dumps({"pages": math.ceil(pages/20), "allergens": jsonable_encoder(allergens)}), media_type="application/json")
 
 
 # Update Allergen
@@ -620,14 +640,17 @@ async def read_product_categories_all():
 # Read Product Categories - Pagination
 @app.get("/product_categories/page/{page_number}")
 async def read_product_categories(page_number: int):
-    if not (await ProductCategory.objects.paginate(page=page_number).all()):
+    if not (await ProductCategory.objects.paginate(page=page_number, page_size=20).all()):
         raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     product_categories = []
     for category in await ProductCategory.objects.select_related(
         ["products", "root_category"]
-    ).all():
+    ).paginate(page=page_number, page_size=20).all():
         product_categories.append(category.dict(exclude_through_models=True))
-    return product_categories
+    pages = await ProductCategory.objects.select_related(["products", "root_category"]).count()
+    if pages > 20:
+        pages -=1
+    return Response(content=json.dumps({"pages": math.ceil(pages/20), "categories": jsonable_encoder(product_categories)}), media_type="application/json")
 
 
 # Update Product Category
@@ -809,12 +832,15 @@ async def read_products(page_number: int, query: ProductQuery2):
         querySet = querySet.filter((Product.categories.id.in_([category])))
     if verified in ['verified', 'not verified']:
         querySet = querySet.filter((Product.verified == verified))
-    if not (products := await querySet.order_by(sort).paginate(page=page_number).all()):
+    if not (products := await querySet.order_by(sort).paginate(page=page_number, page_size=20).all()):
         return []
     products2 = []
     for product in products:
         products2.append(product.dict(exclude_through_models=True))
-    return products2
+    pages = await querySet.order_by(sort).count()
+    if pages > 20:
+        pages -= 1
+    return Response(content=json.dumps({"pages": math.ceil(pages/20), "products": jsonable_encoder(products2)}), media_type="application/json")
 
 
 # Read Products - Filter by name
@@ -1174,6 +1200,15 @@ async def read_set_categories():
     return [set_category.dict(exclude_through_models=True) for set_category in set_categories]
 
 
+# Read Set Categories - Pagination
+@app.get("/set_categories/page/{page}")
+async def read_set_categories_pages(page: int):
+    set_categories = await SetCategory.objects.select_related(['sets']).paginate(page=page, page_size=20).all()
+    set_categories = [set_category.dict(exclude_through_models=True) for set_category in set_categories]
+    pages = await SetCategory.objects.select_related(['sets']).count()
+    return Response(content=json.dumps({"pages": math.ceil(pages/20), "categories": jsonable_encoder(set_categories)}), media_type="application/json")
+
+
 # Update Set Category
 @app.put("/set_categories/{category_id}")
 async def update_set_category(category_id: int, data:SetCategoryUpdate, user=Depends(auth_handler.auth_wrapper)):
@@ -1262,11 +1297,15 @@ async def read_sets(page_number: int, query: SetQuery, user=Depends(auth_handler
     querySet = Set.objects.filter(owner__id=user["id"]).filter(set_name__icontains = set_name)
     if len(categories) > 0:
         querySet = querySet.filter(Set.categories.id.in_(categories))
-    if not (sets2 := await querySet.select_related(['owner', 'products', 'categories']).order_by(sort).paginate(page_number).all()):
-        return []
+    if not (sets2 := await querySet.select_related(['owner', 'products', 'categories']).order_by(sort).paginate(page_number, page_size=2).all()):
+        return Response(content=json.dumps({"pages": None, "sets": jsonable_encoder([])}), media_type="application/json")
     ids = [set_.id for set_ in sets2]
-    sets = await Set.objects.filter(id__in = ids).select_related(['owner', 'products', 'categories']).order_by(sort).paginate(page_number).all()
-    return [set.dict(exclude_through_models=True) for set in sets]
+    sets = await Set.objects.filter(id__in = ids).select_related(['owner', 'products', 'categories']).order_by(sort).all()
+    sets = [set.dict(exclude_through_models=True) for set in sets]
+    pages = await Set.objects.filter(id__in = ids).select_related(['owner', 'products', 'categories']).order_by(sort).count()
+    if pages > 2:
+        pages -= 1
+    return Response(content=json.dumps({"pages": math.ceil(pages/2), "sets": jsonable_encoder(sets)}), media_type="application/json")
 
 
 # Update Set

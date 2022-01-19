@@ -73,24 +73,30 @@
                 </table>
             </div>
         </div>
+        <pagination v-if="pages" :max="pages" @page-update="changePage($event)" :key="reload"></pagination>
     </div>
 </template>
 
 <script>
 import AllergenForm from '@/components/AllergenForm.vue'
+import Pagination from '../../components/Pagination.vue'
 export default {
-    components: { AllergenForm },
+    components: { AllergenForm, Pagination },
     data(){
         return {
             message: null,
-            allergens: null
+            allergens: null,
+            pages: null,
+            page: 1,
+            reload: 0,
         }
     },
     methods: {
         async getAllergens(){
-            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/allergens/page/' + this.$route.params.page, 'GET', {}, this.$store.getters.getToken)
+            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/allergens/page/' + this.page, 'GET', {}, this.$store.getters.getToken)
             if (this.message && !this.message.detail){
-                this.allergens = this.message
+                this.allergens = this.message.allergens
+                this.pages = this.message.pages
                 this.message == null
             }
         },
@@ -108,6 +114,12 @@ export default {
             }else if (obj.action == 'DELETE'){
                 document.querySelector('#deleteModalLabel' + obj.id + ' + button').click()
             }
+            this.getAllergens()
+            this.reload++
+            this.page = 1
+        },
+        changePage(page){
+            this.page = page
             this.getAllergens()
         }
     },

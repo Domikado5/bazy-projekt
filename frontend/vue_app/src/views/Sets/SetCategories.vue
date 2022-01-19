@@ -75,24 +75,30 @@
                 </tbody>
             </table>
         </div>
+        <pagination v-if="pages" :max="pages" @page-update="changePage($event)" :key="reload"></pagination>
     </div>
 </template>
 
 <script>
 import SetCategoryForm from '@/components/SetCategoryForm.vue'
+import Pagination from '../../components/Pagination.vue'
 export default {
-  components: { SetCategoryForm },
+  components: { SetCategoryForm, Pagination },
     data(){
         return {
             message: null,
-            categories: null
+            categories: null,
+            pages: null,
+            page: 1,
+            reload:0
         }
     },
     methods: {
         async getCategories(){
-            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/set_categories', 'GET', {}, this.$store.getters.getToken)
+            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/set_categories/page/' + this.page, 'GET', {}, this.$store.getters.getToken)
             if (this.message && !this.message.detail){
-                this.categories = this.message
+                this.categories = this.message.categories
+                this.pages = this.message.pages
                 this.message = null
             }
         },
@@ -110,6 +116,10 @@ export default {
             }else if (obj.action == 'DELETE'){
                 document.querySelector('#deleteModalLabel' + obj.id + ' + button').click()
             }
+            this.getCategories()
+        },
+        changePage(page){
+            this.page = page
             this.getCategories()
         }
     },

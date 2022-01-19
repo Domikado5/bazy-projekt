@@ -75,27 +75,35 @@
                 </table>
             </div>
         </div>
+        <pagination v-if="pages" :max="pages" @page-update="changePage($event)" :key="reload"></pagination>
     </div>
 </template>
 
 <script>
+import Pagination from '../../components/Pagination.vue'
 import ProductCategoryForm from '../../components/ProductCategoryForm.vue'
 export default {
-  components: { ProductCategoryForm },
+  components: { ProductCategoryForm, Pagination },
     data(){
         return {
             message: null,
             categories: null,
-            rebuild: 1
+            rebuild: 1,
+            pages: null,
+            page: 1,
+            reload: 0,
         }
     },
     methods: {
         async getCategories(){
-            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/product_categories/page/' + this.$route.params.page, 'GET', {}, this.$store.getters.getToken)
+            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/product_categories/page/' + this.page, 'GET', {}, this.$store.getters.getToken)
             if (this.message && !this.message.detail){
-                this.categories = this.message
+                this.categories = this.message.categories
+                this.pages = this.message.pages
                 this.message = null
                 this.rebuild++
+            }else{
+                this.categories = []
             }
         },
         async deleteCategory(id){
@@ -113,12 +121,14 @@ export default {
                 document.querySelector('#deleteModalLabel' + obj.id + ' + button').click()
             }
             this.getCategories()
+        },
+        changePage(page){
+            this.page = page
+            this.getCategories()
         }
     },
     computed: {
-        computeCategories(){
-            return this.categories
-        }
+        
     },
     created(){
         this.getCategories()
