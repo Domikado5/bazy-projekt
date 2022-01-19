@@ -2,6 +2,9 @@
     <div class="container-fluid">
         <div class="row">
             <h1>Diary</h1>
+            <div>
+                <router-link class="btn green accent-2 text-white" active-class="active" to="/diaries">Go back</router-link>
+            </div>
             <div class="red lighten-4 red-text" v-if="message && message.detail">{{ message.detail }}</div>
         </div>
         <div class="row" v-if="diary">

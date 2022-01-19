@@ -48,6 +48,22 @@
                             </div>
                         </div>
                     </div>
+                    <div class="mt-3 px-0 col-12">
+                        <input @input="getSets()" type="text" class="form-control mb-2" placeholder="Search for sets..." v-model="searchSets">
+                        <div id="setsResult" class="blue-grey lighten-3 py-2 px-2">
+                            <div v-for="set in searchedSets" :key="set.id" class="d-flex align-items-center justify-content-end py-2">
+                                <div class="flex-fill">
+                                    {{ set.set_name }} : {{ set.products.length }}
+                                </div>
+                                <div>
+                                    <button @click="addSet(set.id)" class="btn green darken-1 green-text text-lighten-4 py-1 px-2"><i class="bi bi-plus"></i></button>
+                                </div>
+                            </div>
+                            <div v-if="searchedSets.length == 0">
+                                Not found
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -70,6 +86,8 @@ export default {
             },
             searchProducts: "",
             searchedProducts: [],
+            searchSets: "",
+            searchedSets: []
         }
     },
     props: {
@@ -97,6 +115,19 @@ export default {
                 this.searchedProducts = []
             }
         },
+        async getSets(){ // get sets from search
+            if (this.searchSets.length > 0){
+                const query = {
+                    set_name: this.searchSets
+                }
+                this.searchedSets = await this.$fetchUtil(this.$store.getters.getUrl + '/sets/filter', 'POST', query, this.$store.getters.getToken)
+                if (this.searchedSets && this.searchedSets.detail){
+                    this.searchedSets = []
+                }
+            }else{
+                this.searchedSets = []
+            }
+        },
         async updateEntry(obj){ // updates amount in entry, also udpate diary info
             const entry = {
                 amount: obj.amount
@@ -119,6 +150,16 @@ export default {
                 diary_id: this.id
             }
             this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/entries', 'POST', entry, this.$store.getters.getToken)
+            if (this.message && !this.message.detail){
+                this.refreshForm(false)
+            }
+        },
+        async addSet(id){
+            const entrySet = {
+                diary_id: this.id,
+                set_id: id
+            }
+            this.message = await this.$fetchUtil(this.$store.getters.getUrl + '/entries/set', 'POST', entrySet, this.$store.getters.getToken)
             if (this.message && !this.message.detail){
                 this.refreshForm(false)
             }

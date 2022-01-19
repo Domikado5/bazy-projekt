@@ -6,6 +6,7 @@ import decimal
 from fastapi import FastAPI, HTTPException, Depends, Response
 from app.db import (
     CommentQuery,
+    EntrySet,
     PostQuery,
     ProductQuery2,
     SetQuery,
@@ -1038,7 +1039,7 @@ async def read_diary(page_number: int, user=Depends(auth_handler.auth_wrapper)):
     if not (await Diary.objects.paginate(page=page_number).filter(owner__id=user["id"]).all()):
         raise HTTPException(status_code=404, detail=f"Page {page_number} not found")
     diaries = []
-    for diary in await Diary.objects.select_related([Diary.owner]).paginate(page_number).filter(owner__id=user["id"]).all():
+    for diary in await Diary.objects.select_related([Diary.owner]).paginate(page_number).filter(owner__id=user["id"]).order_by('date').all():
         entries = []
         for entry in await Entry.objects.select_related(['product_id']).filter(diary_id=diary.id).all():
             entries.append(entry)
@@ -1062,7 +1063,7 @@ async def read_diary(date: str, user=Depends(auth_handler.auth_wrapper)):
     if not (await Diary.objects.filter(owner__id=user["id"]).filter(date__in=days).all()):
         return []
     diaries = []
-    for diary in await Diary.objects.select_related([Diary.owner]).filter(owner__id=user["id"]).filter(date__in=days).all():
+    for diary in await Diary.objects.select_related([Diary.owner]).filter(owner__id=user["id"]).filter(date__in=days).order_by('date').all():
         entries = []
         for entry in await Entry.objects.select_related(['product_id']).filter(diary_id=diary.id).all():
             entries.append(entry)
@@ -1114,6 +1115,26 @@ async def create_entry(entry: Entry, user=Depends(auth_handler.auth_wrapper)):
     await conn.close()
 
     return entry
+
+
+# Create entries from sets
+@app.post("/entries/set")
+async def create_entries(data: EntrySet, user=Depends(auth_handler.auth_wrapper)):
+    if (diary := await Diary.objects.get_or_none(id=data.diary_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Diary of given ID: {data.diary_id} does not exist")
+    if diary.owner.id != user["id"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if (set := await Set.objects.select_related(['owner', 'products', 'categories']).get_or_none(id=data.set_id)) is None:
+        raise HTTPException(status_code=404, detail=f"Set of given ID: {data.set_id} not found")
+    if user["id"] != set.owner.id:
+        raise HTTPException(status_code=402, detail="Unauthorized")
+    entries = []
+    for product in set.products:
+        if await Entry.objects.get_or_none(product_id=product.id, diary_id=data.diary_id):
+            continue
+        entry = await Entry.objects.create(diary_id=data.diary_id, product_id=product.id, amount=product.base_amount)
+        entries.append(entry)
+    return entries
 
 
 # Read Entry
@@ -1306,6 +1327,19 @@ async def read_sets(page_number: int, query: SetQuery, user=Depends(auth_handler
     if pages > 2:
         pages -= 1
     return Response(content=json.dumps({"pages": math.ceil(pages/2), "sets": jsonable_encoder(sets)}), media_type="application/json")
+
+
+# Read Sets - filter
+@app.post("/sets/filter")
+async def read_sets_filter(query: SetQuery, user=Depends(auth_handler.auth_wrapper)):
+    set_name = '' if not query.set_name else query.set_name
+    querySet = Set.objects.filter(owner__id=user["id"]).filter(set_name__icontains = set_name)
+    if not (sets2 := await querySet.select_related(['owner', 'products']).all()):
+        return []
+    ids = [set_.id for set_ in sets2]
+    sets = await Set.objects.filter(id__in = ids).select_related(['owner', 'products']).all()
+    sets = [set.dict(exclude_through_models=True) for set in sets]
+    return sets
 
 
 # Update Set

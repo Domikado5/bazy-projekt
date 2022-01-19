@@ -223,6 +223,11 @@ class EntryUpdate(BaseModel):
     amount: Optional[decimal.Decimal] = None
 
 
+class EntrySet(BaseModel):
+    diary_id: int
+    set_id: int
+
+
 class Diary(ormar.Model):
     class Meta(BaseMeta):
         tablename = "diaries"

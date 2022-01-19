@@ -37,14 +37,14 @@
             >
               <li><router-link to="/add_product" class="dropdown-item">Add New Product</router-link></li>
               <li><hr class="dropdown-divider" /></li>
-              <li><router-link to="/products/1" class="dropdown-item">List Products</router-link></li>
-              <li><router-link to="/product_categories/1" class="dropdown-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">Categories</router-link></li>
-              <li><router-link to="/allergens/1" class="dropdown-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">Allergens</router-link></li>
+              <li><router-link to="/products" class="dropdown-item">List Products</router-link></li>
+              <li><router-link to="/product_categories" class="dropdown-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">Categories</router-link></li>
+              <li><router-link to="/allergens" class="dropdown-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">Allergens</router-link></li>
               <li><router-link to="/units" class="dropdown-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">Units</router-link></li>
             </ul>
           </li>
           <li class="nav-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">
-            <router-link class="nav-link" active-class="active" to="/users/1">Users</router-link>
+            <router-link class="nav-link" active-class="active" to="/users">Users</router-link>
           </li>
           <li class="nav-item" v-if="$store.getters.getUser && $store.getters.getUser.role == 'admin'">
             <router-link class="nav-link" active-class="active" to="/set_categories">Set Categories</router-link>
@@ -59,8 +59,8 @@
               aria-labelledby="userDropdown"
             >
               <li><router-link :to="'/account/' + $store.getters.getUser.id" class="dropdown-item">Your Profile</router-link></li>
-              <li><router-link to="/diaries/1" class="dropdown-item">Your Diaries</router-link></li>
-              <li><router-link to="/sets/1" class="dropdown-item">Your Sets</router-link></li>
+              <li><router-link to="/diaries" class="dropdown-item">Your Diaries</router-link></li>
+              <li><router-link to="/sets" class="dropdown-item">Your Sets</router-link></li>
               <li><hr class="dropdown-divider" /></li>
               <li><a href="#" @click="logout" class="dropdown-item">Logout</a></li>
             </ul>

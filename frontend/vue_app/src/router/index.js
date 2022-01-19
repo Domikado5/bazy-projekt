@@ -46,7 +46,7 @@ const routes = [
     component: Account,
   },
   {
-    path: "/users/:page",
+    path: "/users",
     name: "Users - List",
     component: UsersList,
   },
@@ -66,7 +66,7 @@ const routes = [
     component: PostEdit
   },
   {
-    path: "/products/:page",
+    path: "/products",
     name: "Products - List",
     component: ProductsList
   },
@@ -81,12 +81,12 @@ const routes = [
     component: Product
   },
   {
-    path: "/product_categories/:page",
+    path: "/product_categories",
     name: "Products - Categories",
     component: ProductCategories
   },
   {
-    path: "/allergens/:page",
+    path: "/allergens",
     name: "Products - Allergens",
     component: Allergens
   },
@@ -96,7 +96,7 @@ const routes = [
     component: Units
   },
   {
-    path: "/sets/:page",
+    path: "/sets",
     name: "Sets",
     component: Sets
   },
@@ -106,7 +106,7 @@ const routes = [
     component: SetCategories
   },
   {
-    path: "/diaries/:page",
+    path: "/diaries",
     name: "Diaries",
     component: Diaries
   },

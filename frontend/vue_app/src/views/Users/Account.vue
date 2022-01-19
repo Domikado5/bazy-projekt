@@ -8,16 +8,16 @@
             <h4>{{ user.username }} <span v-if="user.role != 'user'" class="badge rounded-pill purple">{{ user.role }}</span></h4>
             <h5>{{ user.email }}</h5>
             <div v-if="user.role == 'writer'" class="my-1">
-                <h5>Your posts <span class="badge rounded-pill green white-text">{{ user.posts.length }}</span></h5>
-                <router-link class="btn purple accent-3 white-text" v-for="post in user.posts" :key="post.id" :to="'/post/'+post.id">{{ post.title }}</router-link>
+                <h5 class="d-flex align-items-center justify-content-center">Number of posts <span class="badge rounded-pill green white-text p-1 ms-1">{{ user.posts.length }}</span></h5>
+                <!-- <router-link class="btn purple accent-3 white-text" v-for="post in user.posts" :key="post.id" :to="'/post/'+post.id">{{ post.title }}</router-link> -->
             </div>
             <div class="my-1">
-                <h5>Your diaries <span class="badge rounded-pill green white-text">{{ user.diaries.length }}</span></h5>
-                <a href="#" v-for="diary in user.diaries" :key="diary.id" class="btn purple accent-4 white-text">{{ diary.date }}</a>
+                <h5 class="d-flex align-items-center justify-content-center">Number of diaries <span class="badge rounded-pill green white-text p-1 ms-1">{{ user.diaries.length }}</span></h5>
+                <!-- <a href="#" v-for="diary in user.diaries" :key="diary.id" class="btn purple accent-4 white-text">{{ diary.date }}</a> -->
             </div>
             <div class="my-1">
-                <h5>Your sets <span class="badge rounded-pill green white-text">{{ user.sets.length }}</span></h5>
-                <a href="#" v-for="set in user.sets" :key="set.id" class="btn purple accent-4 white-text">{{ set.set_name }}</a>
+                <h5 class="d-flex align-items-center justify-content-center">Number of sets <span class="badge rounded-pill green white-text p-1 ms-1">{{ user.sets.length }}</span></h5>
+                <!-- <a href="#" v-for="set in user.sets" :key="set.id" class="btn purple accent-4 white-text">{{ set.set_name }}</a> -->
             </div>
             <div class="my-1" v-if="$store.getters.getUser.role == 'admin' || $store.getters.getUser.id == user.id">
                 <button @click="deleteUser()" class="btn red accent-2 text-white mx-1">Delete Account</button>
