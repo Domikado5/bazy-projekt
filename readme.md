@@ -31,9 +31,9 @@ Main:
 - [ ] Create UI in Vue.js
   - [x] Create Login Page
   - [x] Configure VUEX for storing authentication Token
-  - [ ] Create UI for CRUD
+  - [x] Create UI for CRUD
     - [x] Pagination for list elements
-    - [ ] Adding products with sets
+    - [x] Adding products with sets
     - [x] Filtering and Sorting queries
       - [x] Posts
       - [x] Comments
