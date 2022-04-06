@@ -1,5 +1,4 @@
-## Fit Apka do liczenia kalorii
-
+## Calories counter
 ![alt text](fitapka_erd.png "ERD Diagram")
 
 
