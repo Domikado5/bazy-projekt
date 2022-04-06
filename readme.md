@@ -1,66 +1,7 @@
 ## Fit Apka do liczenia kalorii
 
-Documentation (In Polish):
-https://www.overleaf.com/read/pwfzsskkhvht
-
 ![alt text](fitapka_erd.png "ERD Diagram")
 
-## TODO
-Main:
-- [x] Make latex docs.
-- [x] Make ERD diagram.
-- [x] Configure docker for postgres and Python/FastAPI.
-- [x] Create db in Postgres.
-- [x] Make CRUD in FastAPI (11/11)
-    - [x] CRUD for User model
-    - [x] CRUD for Post model
-    - [x] CRUD for Comment model
-    - [x] CRUD for Unit model
-    - [x] CRUD for Allergen model
-    - [x] CRUD for Product model
-    - [x] CRUD for ProductCategory model
-    - [x] CRUD for Entry model
-    - [x] CRUD for Diary model
-    - [x] CRUD for SetCategory model
-    - [x] CRUD for Set model
-- [x] Create package with function and procedure in SQL
-  - [x] Create update diary procedure
-  - [x] Create calculate proportions function
-- [x] Pin SQL procedures and functions to backend
-- [x] Create Indexes for tables in SQL
-- [ ] Create UI in Vue.js
-  - [x] Create Login Page
-  - [x] Configure VUEX for storing authentication Token
-  - [x] Create UI for CRUD
-    - [x] Pagination for list elements
-    - [x] Adding products with sets
-    - [x] Filtering and Sorting queries
-      - [x] Posts
-      - [x] Comments
-      - [x] Products
-      - [x] Users
-      - [x] Diaries (filter by month)
-      - [x] Sets
-    - [x] UI for Post
-      - [x] UI for Comment
-    - [x] UI for User
-      - [x] Login
-      - [x] Register
-      - [x] Account
-        - [x] Modify/Update Account
-      - [x] List - Admin
-    - [x] UI for product
-      - [x] UI for categories - product
-      - [x] UI for allergens
-      - [x] UI for units
-    - [x] UI for diaries
-      - [x] UI for entries
-    - [x] UI for sets
-      - [x] UI for categories - set
-
-Optional:
-- [x] Make REST API.
-- [x] JWT Authentication.
 
 ---
 # To run the app
